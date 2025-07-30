@@ -63,6 +63,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/actions-runner/_work/PICKL_BE/PICKL_BE
+            
+            echo SPRING_PROFILES_ACTIVE=dev > .env
+            echo SPRING_DATASOURCE_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} >> .env
+            echo MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} >> .env
+            echo MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} >> .env
+            
             docker compose down
             docker compose pull
             docker compose up -d --build
