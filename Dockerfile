@@ -4,16 +4,16 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-# 캐시 계층 최적화: 의존성 먼저 복사
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
+# 존재하는 파일만 복사
+COPY build.gradle .
+COPY settings.gradle .
 COPY gradle ./gradle
 COPY gradlew .
 
-# 의존성만 먼저 다운 (실패해도 무시해서 캐시 유지)
+# 의존성 캐시를 위한 프리 빌드 (실패 무시)
 RUN ./gradlew build -x test || return 0
 
-# 실제 소스 복사 후 빌드
+# 전체 소스 복사 후 빌드
 COPY . .
 
 RUN ./gradlew build -x test
