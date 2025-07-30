@@ -1,0 +1,86 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '6.19.0'
+}
+
+group = 'com.likelion'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('compileJava') {
+    dependsOn 'spotlessApply'
+}
+
+// Spotless 설정
+spotless {
+    java {
+        googleJavaFormat()
+
+        importOrder('java', 'javax', 'jakarta', 'org.springframework', 'com.likelion', 'com')
+
+        removeUnusedImports()
+
+        trimTrailingWhitespace()
+
+        endWithNewline()
+    }
+}
+
+check.dependsOn 'spotlessCheck'
+
+// 환경 설정 파일 복사
+tasks.register('copyResources', Copy) {
+    from './PICKL_BE_Config'
+    include '*.properties'
+    into 'src/main/resources/'
+}
+
+// Spring build, bootRun 전 복사되도록 연결
+processResources {
+    dependsOn 'copyResources'
+}
+
+tasks.named('bootRun') {
+    dependsOn 'copyResources'
+}
+
+// 테스트 실행 시 profile 지정 가능하게
+test {
+    doFirst {
+        def profile = project.hasProperty('profile') ? project.property('profile').toString() : 'local'
+        jvmArgs = ["-Dspring.profiles.active=${profile}"]
+    }
+}
