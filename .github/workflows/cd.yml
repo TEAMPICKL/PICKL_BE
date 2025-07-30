@@ -29,6 +29,17 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      # ✅ 캐시 추가 (요 위치!)
+      - name: Gradle dependency cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
       # 4. gradlew에 실행 권한 부여
       - name: Grant execute permission for Gradlew
         run: chmod +x gradlew

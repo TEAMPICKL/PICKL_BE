@@ -13,7 +13,7 @@ services:
     depends_on:
       - mysql
     networks:
-      - sbs-network
+      - pickl-network
 
   mysql:
     image: mysql:8.0
@@ -30,7 +30,7 @@ services:
       - pickl-network
 
 networks:
-  sbs-network:
+  pickl-network:
     driver: bridge  # Docker 기본 브리지 네트워크를 사용
 
 volumes:
