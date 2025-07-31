@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   app:
     build: .
@@ -31,10 +33,10 @@ services:
 
   nginx:
     container_name: nginx-container
+    image: nginx:latest
     ports:
       - "80:80"
       - "443:443"
-    image: nginx:latest
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
     networks:
@@ -42,7 +44,7 @@ services:
 
 networks:
   pickl-network:
-    driver: bridge  # Docker 기본 브리지 네트워크를 사용
+    driver: bridge
 
 volumes:
-  mysql-data:  # 위에서 정의한 MySQL 데이터를 저장할 볼륨
+  mysql-data:
