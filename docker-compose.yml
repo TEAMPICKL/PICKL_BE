@@ -37,7 +37,6 @@ services:
     image: nginx:latest
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
-      -
     networks:
       - pickl-network
 
