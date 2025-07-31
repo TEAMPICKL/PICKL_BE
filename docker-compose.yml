@@ -13,7 +13,8 @@ services:
     command:
       - java -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} -jar app.jar
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - pickl-network
 
@@ -28,6 +29,11 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - pickl-network
 
@@ -38,7 +44,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
+      - /home/ubuntu/nginx/conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app
     networks:
       - pickl-network
 
