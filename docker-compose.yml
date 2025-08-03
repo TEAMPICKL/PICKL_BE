@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  app:
+    image: ${DOCKER_USERNAME}/${DOCKER_REPO}
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pickl
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    command:
+      - java -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} -jar app.jar
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - pickl-network
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=pickl
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pickl-network
+
+  nginx:
+    container_name: nginx-container
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /home/ubuntu/nginx/conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app
+    networks:
+      - pickl-network
+
+networks:
+  pickl-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
