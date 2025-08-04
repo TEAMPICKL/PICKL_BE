@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   app:
-    image: ${DOCKER_USERNAME}/${DOCKER_REPO}
+    image: ${DOCKER_USERNAME}/${DOCKER_REPO}:latest
     ports:
       - "8080:8080"
     environment:
