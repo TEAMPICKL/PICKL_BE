@@ -9,5 +9,4 @@ public class PicklbeApplication {
   public static void main(String[] args) {
     SpringApplication.run(PicklbeApplication.class, args);
   }
-
 }
