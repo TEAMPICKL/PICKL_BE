@@ -1,0 +1,39 @@
+package com.likelion.picklbe.domain.seasonitems.recipe.entity;
+
+import jakarta.persistence.*;
+
+import com.likelion.picklbe.domain.seasonitems.entity.SeasonItem;
+
+import lombok.*;
+
+@Entity
+@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Table(name = "season_item_recipe")
+public class Recipe {
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Column(name = "recipeName", nullable = false)
+  private String recipeName;
+
+  @Lob
+  @Column(name = "ingredients", nullable = false)
+  private String ingredients; // 준비물
+
+  @Lob
+  @Column(name = "instructions", nullable = false)
+  private String instructions; // 조리 방법
+
+  @Lob
+  @Column(name = "tip", nullable = false)
+  private String tip; // 꿀팁
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "season_item_id", nullable = false)
+  private SeasonItem seasonItem;
+}
