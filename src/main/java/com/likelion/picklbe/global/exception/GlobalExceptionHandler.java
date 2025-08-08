@@ -51,8 +51,16 @@ public class GlobalExceptionHandler {
   // 예상하지 못한 예외 처리
   @ExceptionHandler(Exception.class)
   public ResponseEntity<BaseResponse<Object>> handleException(Exception ex) {
-    log.error("Server 오류 발생: ", ex);
+    log.error("Server 오류 발생: {}", ex.getMessage(), ex);
+
+    // VWORLD 요청/응답 에러 확인용 임시 로그
+    if (ex.getCause() != null) {
+      log.error("Cause: {}", ex.getCause().getMessage());
+    }
+
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(BaseResponse.error(500, "예상하지 못한 서버 오류가 발생했습니다."));
+        .body(
+            BaseResponse.error(
+                500, "예상하지 못한 서버 오류가 발생했습니다. 원인: " + ex.getMessage())); // ← 임시로 원인 메시지 같이 반환
   }
 }
