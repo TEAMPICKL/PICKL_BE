@@ -1,47 +1,51 @@
 package com.likelion.picklbe.global.api.market.client;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Mono;
 
-@Service
+@Component
+@RequiredArgsConstructor
 public class MarketOpenApiClient {
 
-  private static final String SERVICE_KEY =
-      "zTQoSerFeqqlMDuJI4uZg5AERDK5AMbL8caK5M0FL6Ou1PZifFYtQF0kGBAD9uMxF8Y%2BQHDtR78b1wyW7Qbkig%3D%3D";
+  private final WebClient vworldWebClient;
 
-  public String fetchMarkets() {
-    try {
-      String url =
-          "https://apis.data.go.kr/6260000/MarketService/getMarketList"
-              + "?serviceKey="
-              + SERVICE_KEY
-              + "&pageNo=1"
-              + "&numOfRows=100"
-              + "&type=json";
+  @Value("${vworld.key}")
+  private String apiKey;
 
-      HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-      conn.setRequestMethod("GET");
+  @Value("${vworld.domain}")
+  private String domain;
 
-      BufferedReader rd =
-          new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-      StringBuilder result = new StringBuilder();
-      String line;
-      while ((line = rd.readLine()) != null) {
-        result.append(line);
-      }
-      rd.close();
-      conn.disconnect();
+  @Value("${vworld.data-layer}")
+  private String dataLayer;
 
-      return result.toString();
+  public String getMarketsByBbox(
+      double minX, double minY, double maxX, double maxY, Integer page, Integer size) {
 
-    } catch (Exception e) {
-      e.printStackTrace();
-      return null;
-    }
+    MultiValueMap<String, String> q = new LinkedMultiValueMap<>();
+    q.add("service", "data");
+    q.add("request", "GetFeature");
+    q.add("data", dataLayer);
+    q.add("key", apiKey);
+    q.add("domain", domain);
+    q.add("format", "JSON");
+    q.add("crs", "EPSG:4326"); // Kakao와 동일
+    q.add("geomFilter", String.format("BOX(%f,%f,%f,%f)", minX, minY, maxX, maxY));
+    q.add("size", String.valueOf(size != null ? size : 500));
+    if (page != null) q.add("page", String.valueOf(page));
+
+    // global 레이어에서는 일단 원본 JSON String으로 반환 (유연성↑)
+    return vworldWebClient
+        .get()
+        .uri(uri -> uri.queryParams(q).build())
+        .retrieve()
+        .bodyToMono(String.class)
+        .onErrorResume(e -> Mono.error(new RuntimeException("V-World 호출 실패: " + e.getMessage(), e)))
+        .block();
   }
 }
