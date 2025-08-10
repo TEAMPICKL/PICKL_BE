@@ -1,12 +1,14 @@
 package com.likelion.picklbe.domain.mart.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.likelion.picklbe.domain.marketplace.dto.response.MarketMarkerResponse;
 import com.likelion.picklbe.global.api.mart.client.KakaoLocalClient;
 import com.likelion.picklbe.global.api.mart.dto.KakaoCategoryResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -26,15 +28,17 @@ public class MartQueryService {
     }
 
     return resp.getDocuments().stream()
-        .map(d -> MarketMarkerResponse.builder()
-            .id(d.getId())
-            .name(d.getPlaceName())
-            .category("대형마트") // 혹은 d.getCategoryName() 일부 파싱
-            .address(first(d.getRoadAddressName(), d.getAddressName()))
-            .lng(parse(d.getX()))
-            .lat(parse(d.getY()))
-            .parking(null) // 카카오 문서엔 없음
-            .build())
+        .map(
+            d ->
+                MarketMarkerResponse.builder()
+                    .id(d.getId())
+                    .name(d.getPlaceName())
+                    .category("대형마트") // 혹은 d.getCategoryName() 일부 파싱
+                    .address(first(d.getRoadAddressName(), d.getAddressName()))
+                    .lng(parse(d.getX()))
+                    .lat(parse(d.getY()))
+                    .parking(null) // 카카오 문서엔 없음
+                    .build())
         .toList();
   }
 
