@@ -23,8 +23,9 @@ services:
   langchain:
     image: ${DOCKER_USERNAME}/${CHATBOT_REPO}:${CHATBOT_TAG:-latest}
     env_file: .env
+    command: [ "uvicorn","app.main:app","--host","0.0.0.0","--port","8000" ]  # ← 추가
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,7 +42,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
