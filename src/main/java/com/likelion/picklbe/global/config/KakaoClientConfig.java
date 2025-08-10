@@ -17,14 +17,21 @@ public class KakaoClientConfig {
   // KakaoClientConfig
   @Bean
   public WebClient kakaoWebClient(@Value("${kakao.rest-api-key}") String key) {
-    ExchangeFilterFunction logRequest = ExchangeFilterFunction.ofRequestProcessor(req -> {
-      log.info("[KAKAO] -> {} {}", req.method(), req.url());
-      return Mono.just(req);
-    });
-    ExchangeFilterFunction logResponse = ExchangeFilterFunction.ofResponseProcessor(res -> {
-      log.info("[KAKAO] <- status={}, headers={}", res.statusCode(), res.headers().asHttpHeaders());
-      return Mono.just(res);
-    });
+    ExchangeFilterFunction logRequest =
+        ExchangeFilterFunction.ofRequestProcessor(
+            req -> {
+              log.info("[KAKAO] -> {} {}", req.method(), req.url());
+              return Mono.just(req);
+            });
+    ExchangeFilterFunction logResponse =
+        ExchangeFilterFunction.ofResponseProcessor(
+            res -> {
+              log.info(
+                  "[KAKAO] <- status={}, headers={}",
+                  res.statusCode(),
+                  res.headers().asHttpHeaders());
+              return Mono.just(res);
+            });
 
     return WebClient.builder()
         .baseUrl("https://dapi.kakao.com")
