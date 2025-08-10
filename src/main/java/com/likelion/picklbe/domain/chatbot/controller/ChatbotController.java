@@ -1,20 +1,26 @@
 package com.likelion.picklbe.domain.chatbot.controller;
 
+import jakarta.validation.Valid;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatRequest;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatResponse;
 import com.likelion.picklbe.domain.chatbot.service.ChatbotService;
 import com.likelion.picklbe.global.response.BaseResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Chatbot", description = "챗봇 대화 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/chatbot")
-@Tag(name = "Chatbot", description = "챗봇 대화 API")
 public class ChatbotController {
 
   private final ChatbotService service;
