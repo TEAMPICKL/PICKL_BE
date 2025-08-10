@@ -13,11 +13,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.*;
-import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.*;
-import com.likelion.picklbe.domain.chatbot.entity.*;
+import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatRequest;
+import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatResponse;
+import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ConversationDetailResponse;
+import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.MessageItem;
+import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.ChatRes;
+import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.HistoryReq;
+import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.Turn;
+import com.likelion.picklbe.domain.chatbot.entity.Conversation;
+import com.likelion.picklbe.domain.chatbot.entity.Message;
+import com.likelion.picklbe.domain.chatbot.entity.MessageRole;
 import com.likelion.picklbe.domain.chatbot.exception.ChatbotErrorCode;
-import com.likelion.picklbe.domain.chatbot.repository.*;
+import com.likelion.picklbe.domain.chatbot.repository.ConversationRepository;
+import com.likelion.picklbe.domain.chatbot.repository.MessageRepository;
+import com.likelion.picklbe.domain.chatbot.repository.UserMemoryRepository;
 import com.likelion.picklbe.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -44,7 +53,9 @@ public class ChatbotService {
   private String buildMemoryBlock(Long userId) {
     var rows =
         memoryRepo.findByUserIdOrderByModifiedAtDesc(userId, PageRequest.of(0, memoryMaxRows));
-    if (rows.isEmpty()) return "";
+    if (rows.isEmpty()) {
+      return "";
+    }
     return rows.stream().map(m -> m.getK() + ": " + m.getV()).collect(Collectors.joining("\n"));
   }
 
@@ -124,5 +135,25 @@ public class ChatbotService {
             .build());
 
     return new ChatResponse(conv.getId(), res.reply());
+  }
+
+  public ConversationDetailResponse getConversationDetail(Long userId, Long conversationId) {
+    var conv =
+        conversationRepo
+            .findById(conversationId)
+            .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
+
+    // 남의 대화면 같은 에러로 응답(정보 노출 최소화)
+    if (conv.getUserId() == null || !conv.getUserId().equals(userId)) {
+      throw new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND);
+    }
+
+    var msgs = messageRepo.findByConversationIdOrderByCreatedAtAsc(conversationId);
+    var items =
+        msgs.stream()
+            .map(m -> new MessageItem(m.getId(), m.getRole(), m.getContent(), m.getCreatedAt()))
+            .toList();
+
+    return new ConversationDetailResponse(conv.getId(), conv.getUserId(), conv.getTitle(), items);
   }
 }
