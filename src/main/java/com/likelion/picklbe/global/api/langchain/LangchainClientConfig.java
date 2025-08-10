@@ -1,0 +1,15 @@
+package com.likelion.picklbe.global.api.langchain;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Configuration
+public class LangchainClientConfig {
+
+  @Bean
+  public WebClient langchainWebClient(@Value("${langchain.base-url}") String baseUrl) {
+    return WebClient.builder().baseUrl(baseUrl).build();
+  }
+}
