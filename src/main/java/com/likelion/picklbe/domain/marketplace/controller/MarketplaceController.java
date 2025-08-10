@@ -29,11 +29,17 @@ public class MarketplaceController {
       summary = "현재 지도 BBOX 내 전통시장 마커 조회",
       description =
           """
-    지도 뷰포트의 경계(BBOX: minX/minY/maxX/maxY)로 VWORLD 전통시장 데이터를 조회한 뒤
-    마커 표시에 필요한 최소 정보(id, name, category, address, lat, lng, parking)만 반환합니다.
-    - 좌표계: WGS84 (EPSG:4326)
-    - page는 1부터 시작, size 기본 50
-    """)
+              지도 뷰포트의 경계(BBOX: minX/minY/maxX/maxY)로 VWORLD 전통시장 데이터를 조회한 뒤
+              마커 표시에 필요한 최소 정보(id, name, category, address, lat, lng, parking)만 반환합니다.
+              - 좌표계: WGS84 (EPSG:4326)
+              - page는 1부터 시작, size 기본 50
+
+              **예시 (성북구 전체 범위)** \s
+                      minX=126.99 \s
+                      minY=37.56 \s
+                      maxX=127.03 \s
+                      maxY=37.63
+              """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
