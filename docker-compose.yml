@@ -1,4 +1,4 @@
-version: "3.8"
+# 'version' 키는 최신 compose에선 obsolete 경고가 떠서 제거 권장
 
 services:
   app:
@@ -15,6 +15,19 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      langchain:
+        condition: service_healthy
+    networks:
+      - pickl-network
+
+  langchain:
+    image: ${DOCKER_USERNAME}/${CHATBOT_REPO}:${CHATBOT_TAG:-latest}
+    env_file: .env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - pickl-network
 
