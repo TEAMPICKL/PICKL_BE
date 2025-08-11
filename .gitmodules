@@ -1,3 +1,4 @@
 [submodule "PICKL_BE_Config"]
 	path = PICKL_BE_Config
 	url = https://github.com/TEAMPICKL/PICKL_BE_Config.git
+	branch = main
