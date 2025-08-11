@@ -51,6 +51,10 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.463'
 
+    // ==== Netty native DNS for macOS (Netty가 네이티브 DNS 리졸버를 사용) ====
+    // Spring Boot의 dependency management가 Netty 버전을 맞춰주므로 버전 표기는 생략
+    implementation "io.netty:netty-resolver-dns-native-macos::osx-aarch_64"
+
     // ==== Test ====
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
