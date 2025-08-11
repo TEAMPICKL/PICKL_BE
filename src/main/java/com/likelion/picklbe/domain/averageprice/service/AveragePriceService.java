@@ -1,6 +1,10 @@
 package com.likelion.picklbe.domain.averageprice.service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -11,6 +15,7 @@ import com.likelion.picklbe.domain.averageprice.response.CategoryAveragePriceRes
 import com.likelion.picklbe.domain.averageprice.response.ItemPriceResponse;
 import com.likelion.picklbe.global.api.kamis.client.KamisPriceClient;
 import com.likelion.picklbe.global.api.kamis.dto.KamisPriceResponse.Item;
+import com.likelion.picklbe.global.api.unsplash.client.UnsplashClient;
 import com.likelion.picklbe.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +28,7 @@ public class AveragePriceService {
 
   private final KamisPriceClient kamisPriceClient;
   private final AveragePriceMapper averagePriceMapper;
+  private final UnsplashClient unsplashClient;
 
   public List<CategoryAveragePriceResponse> getCategoryAverages() {
     List<Item> items =
@@ -88,10 +94,47 @@ public class AveragePriceService {
   }
 
   public List<ItemPriceResponse> getItemPrices() {
-    List<Item> items =
+    var items =
         Optional.ofNullable(kamisPriceClient.fetchPriceData().getPrice())
             .orElseThrow(() -> new CustomException(AveragePriceErrorCode.PRICE_DATA_NOT_FOUND));
 
-    return items.stream().map(averagePriceMapper::toItemResponse).toList();
+    // 1) 기본 가격 응답 만들기
+    var base = items.stream().map(averagePriceMapper::toItemResponse).toList();
+
+    // 2) 같은 품목은 한 번만 검색하도록 요청 단위 캐시
+    Map<String, String> imageCache = new HashMap<>();
+
+    // 3) 이미지 URL 붙여서 반환
+    return base.stream()
+        .map(
+            dto -> {
+              String query = toUnsplashQuery(dto.getProductName());
+              String url =
+                  imageCache.computeIfAbsent(query, q -> unsplashClient.searchProduceImageUrl(q));
+              return dto.toBuilder().imageUrl(url).build();
+            })
+        .toList();
+  }
+
+  /** "배추/여름(고랭지)" → "배추" 같은 형태로 검색어 정제 */
+  private String toUnsplashQuery(String productName) {
+    if (productName == null) {
+      return "vegetable";
+    }
+    // 1) '/' 앞쪽 대표명 우선
+    String main = productName.split("/", 2)[0];
+    // 2) 괄호·특수문자 제거
+    main =
+        main.replaceAll("[()\\[\\]{}]", " ")
+            .replaceAll("[^가-힣a-zA-Z0-9\\s]", " ")
+            .replaceAll("\\s+", " ")
+            .trim();
+    // 3) 최소 폴백
+    return main.isEmpty() ? "vegetable" : main;
+  }
+
+  public String previewImageUrl(String productName) {
+    String query = toUnsplashQuery(productName);
+    return unsplashClient.searchProduceImageUrl(query);
   }
 }

@@ -6,9 +6,10 @@ import lombok.Builder;
 import lombok.Data;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 public class ItemPriceResponse {
+
   @Schema(description = "상품명", example = "배추")
   private String productName;
 
@@ -26,4 +27,7 @@ public class ItemPriceResponse {
 
   @Schema(description = "가격 변동률 (%)", example = "16.67")
   private double priceDiffRate;
+
+  @Schema(description = "unsplash 사진 url", example = "https://images.unsplash.com/photo-....")
+  private String imageUrl;
 }
