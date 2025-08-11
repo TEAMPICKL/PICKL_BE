@@ -49,6 +49,11 @@ public class ChatbotService {
   @Value("${chatbot.timeout-ms:10000}")
   private long timeoutMs;
 
+  // NEW: 제목 생성 요청/응답 DTO (로컬 레코드)
+  private record TitleReq(String message, String memory, int max_len) {}
+
+  private record TitleRes(String title) {}
+
   /** 사용자 메모리 문자열 생성 */
   private String buildMemoryBlock(Long userId) {
     var rows =
@@ -71,19 +76,49 @@ public class ChatbotService {
         .toList();
   }
 
+  // NEW: LangChain에 제목 생성 요청
+  private String requestSmartTitle(String firstMessage, Long userId) {
+    try {
+      var memory = buildMemoryBlock(userId);
+      var res =
+          langchainWebClient
+              .post()
+              .uri("/title")
+              .contentType(MediaType.APPLICATION_JSON)
+              .bodyValue(new TitleReq(firstMessage, memory, 20))
+              .retrieve()
+              .onStatus(
+                  HttpStatusCode::isError,
+                  rsp ->
+                      rsp.bodyToMono(String.class)
+                          .map(
+                              body -> new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED)))
+              .bodyToMono(TitleRes.class)
+              .timeout(Duration.ofMillis(timeoutMs))
+              .block();
+
+      if (res != null && res.title() != null && !res.title().isBlank()) {
+        return res.title().trim();
+      }
+    } catch (Exception ignore) {
+      // 제목 생성 실패는 치명적 아님
+    }
+    return null;
+  }
+
   public ChatResponse chat(ChatRequest req) {
     if (req == null || req.userId() == null || req.message() == null || req.message().isBlank()) {
       throw new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED);
     }
 
     // 1) 대화방 확보
+    boolean isNew = (req.conversationId() == null);
     Conversation conv =
-        (req.conversationId() != null)
-            ? conversationRepo
+        isNew
+            ? conversationRepo.save(Conversation.builder().userId(req.userId()).title("대화").build())
+            : conversationRepo
                 .findByIdAndUserId(req.conversationId(), req.userId())
-                .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND))
-            : conversationRepo.save(
-                Conversation.builder().userId(req.userId()).title("대화").build());
+                .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
 
     // 2) 유저 발화 저장
     messageRepo.save(
@@ -92,6 +127,15 @@ public class ChatbotService {
             .role(MessageRole.USER)
             .content(req.message())
             .build());
+
+    // NEW: 새 대화면 제목 생성 시도 (실패해도 무시)
+    if (isNew) {
+      String smart = requestSmartTitle(req.message(), req.userId());
+      if (smart != null && !smart.isBlank()) {
+        conv.setTitle(smart);
+        conversationRepo.save(conv);
+      }
+    }
 
     // 3) 메모리 & 히스토리
     String memory = buildMemoryBlock(req.userId());
@@ -109,8 +153,8 @@ public class ChatbotService {
               .retrieve()
               .onStatus(
                   HttpStatusCode::isError,
-                  rsp -> // ✅ 여기!
-                  rsp.bodyToMono(String.class)
+                  rsp ->
+                      rsp.bodyToMono(String.class)
                           .map(
                               body -> new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED)))
               .bodyToMono(ChatRes.class)
