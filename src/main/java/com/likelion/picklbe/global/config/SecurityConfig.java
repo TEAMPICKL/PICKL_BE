@@ -47,6 +47,8 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers("/api/**")
                     .permitAll()
+                    .requestMatchers("/actuator/**", "/debug/cache/**")
+                    .permitAll()
                     .anyRequest()
                     .denyAll())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
