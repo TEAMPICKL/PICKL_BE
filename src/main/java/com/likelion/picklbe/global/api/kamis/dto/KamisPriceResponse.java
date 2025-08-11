@@ -1,12 +1,14 @@
 package com.likelion.picklbe.global.api.kamis.dto;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import lombok.Data;
@@ -25,6 +27,7 @@ public class KamisPriceResponse {
 
   @Data
   public static class Item {
+
     @JsonProperty("product_cls_code")
     private String productClsCode;
 
@@ -91,6 +94,7 @@ public class KamisPriceResponse {
 
   /** 배열이면 풀고, 단일이면 하나짜리 리스트에 담아서 반환 */
   public static class StringListDeserializer extends JsonDeserializer<List<String>> {
+
     @Override
     public List<String> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
       List<String> list = new ArrayList<>();

@@ -1,6 +1,7 @@
 package com.likelion.picklbe.global.api.kamis.client;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -26,7 +27,9 @@ public class KamisPriceClient {
   private final WebClient webClient =
       WebClient.builder().baseUrl("https://www.kamis.or.kr").build();
 
+  @Cacheable(cacheNames = "kamisDaily", key = "'items'", unless = "#result == null")
   public KamisPriceResponse fetchPriceData() {
+    log.info("[KAMIS MISS] fetching daily price…");
     String uri = "/service/price/xml.do";
     return webClient
         .get()
