@@ -10,6 +10,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pickl?useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true&useSSL=false
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_FLYWAY_ENABLED=false
     command:
       - java -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} -jar app.jar
     depends_on:
