@@ -20,8 +20,13 @@ import com.likelion.picklbe.domain.quiz.repository.QuizAttemptRepository;
 import com.likelion.picklbe.domain.quiz.service.QuizService;
 import com.likelion.picklbe.global.security.annotation.AuthUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "퀴즈 API", description = "일일 OX 퀴즈 관련 API")
 @RestController
 @RequestMapping("/api/quiz")
 @RequiredArgsConstructor
@@ -31,7 +36,13 @@ public class QuizController {
   private final DailyQuizRepository dailyQuizRepo;
   private final QuizAttemptRepository attemptRepo;
 
-  @GetMapping("/api/quiz/daily")
+  @Operation(summary = "오늘의 퀴즈 조회", description = "로그인한 사용자의 오늘의 OX 퀴즈를 조회합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "퀴즈 조회 성공"),
+      @ApiResponse(responseCode = "401", description = "인증 실패"),
+      @ApiResponse(responseCode = "404", description = "오늘의 퀴즈가 존재하지 않음")
+  })
+  @GetMapping("/daily")
   public QuizDailyResponse getDaily(@AuthUser Long userId) {
     DailyQuiz dq = quizService.getOrThrowTodayQuiz();
     boolean attempted = attemptRepo.existsByUserIdAndQuizDate(userId, dq.getQuizDate());
@@ -50,7 +61,13 @@ public class QuizController {
         .build();
   }
 
-  @PostMapping("/api/quiz/daily/answer")
+  @Operation(summary = "오늘의 퀴즈 정답 제출", description = "오늘의 OX 퀴즈에 대한 정답을 제출하고, 결과 및 포인트를 반환합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "정답 처리 성공"),
+      @ApiResponse(responseCode = "400", description = "잘못된 요청 또는 이미 응시함"),
+      @ApiResponse(responseCode = "401", description = "인증 실패")
+  })
+  @PostMapping("/daily/answer")
   public QuizAnswerResult answer(@AuthUser Long userId, @Valid @RequestBody QuizAnswerRequest req) {
     var result = quizService.answer(userId, req.asBoolean(), req.getIdempotencyKey());
     return QuizAnswerResult.builder()
@@ -62,7 +79,11 @@ public class QuizController {
         .build();
   }
 
-  // 운영용 (관리자만 호출) : 오늘 퀴즈 강제 생성
+  @Operation(summary = "오늘의 퀴즈 강제 생성 (운영용)", description = "관리자 권한으로 오늘의 퀴즈를 강제로 생성합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "퀴즈 생성 성공"),
+      @ApiResponse(responseCode = "403", description = "권한 없음")
+  })
   @PostMapping("/daily/admin/force-generate")
   public Map<String, String> forceGenerate() {
     DailyQuiz dq = quizService.createTodayQuizIfAbsent();

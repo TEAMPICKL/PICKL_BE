@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS quiz_pool (
                                          CONSTRAINT fk_quiz_pool_ingredient FOREIGN KEY (ingredient_id) REFERENCES ingredient(id)
     );
 
-CREATE INDEX IF NOT EXISTS idx_quiz_pool_active ON quiz_pool(is_active);
-CREATE INDEX IF NOT EXISTS idx_quiz_pool_last_used ON quiz_pool(last_used_date);
+CREATE INDEX idx_quiz_pool_active ON quiz_pool(is_active);
+CREATE INDEX idx_quiz_pool_last_used ON quiz_pool(last_used_date);
 
 -- Daily Quiz (하루 1문항)
 CREATE TABLE IF NOT EXISTS daily_quiz (
