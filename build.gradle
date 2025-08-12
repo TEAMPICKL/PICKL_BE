@@ -35,7 +35,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // ==== Database ====
+    // MySQL JDBC 드라이버
     runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // ==== Flyway (DB 마이그레이션) ====
+    // - flyway-core: 마이그레이션 엔진
+    // - flyway-mysql: MySQL 전용 기능/방언 분리 모듈 (Flyway 10+)
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
 
     // ==== Lombok ====
     compileOnly 'org.projectlombok:lombok'
@@ -57,12 +64,12 @@ dependencies {
     // Spring Boot의 dependency management가 Netty 버전을 맞춰주므로 버전 표기는 생략
     implementation "io.netty:netty-resolver-dns-native-macos::osx-aarch_64"
 
+    // ==== Cache ====
+    implementation "com.github.ben-manes.caffeine:caffeine:3.1.8"
+
     // ==== Test ====
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // ==== Cache ====
-    implementation "com.github.ben-manes.caffeine:caffeine:3.1.8"
 }
 
 tasks.named('test') {
