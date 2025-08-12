@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import org.springdoc.core.models.GroupedOpenApi;
 
 @Configuration
@@ -35,7 +36,9 @@ public class SwaggerConfig {
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
                         .bearerFormat("JWT")))
-        .info(new Info().title("Swagger API 명세서").version("1.0").description("My Swagger"));
+        .info(new Info().title("Swagger API 명세서").version("1.0").description("My Swagger"))
+        .addTagsItem(new Tag().name("Quiz").description("일일 O/X 퀴즈"))
+        .addTagsItem(new Tag().name("Point").description("포인트 지갑/거래"));
   }
 
   @Bean
