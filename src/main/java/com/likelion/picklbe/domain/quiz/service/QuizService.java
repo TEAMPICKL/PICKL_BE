@@ -15,6 +15,8 @@ import com.likelion.picklbe.domain.quiz.entity.QuizPool;
 import com.likelion.picklbe.domain.quiz.repository.DailyQuizRepository;
 import com.likelion.picklbe.domain.quiz.repository.QuizAttemptRepository;
 import com.likelion.picklbe.domain.quiz.repository.QuizPoolRepository;
+import com.likelion.picklbe.global.exception.ApiException;
+import com.likelion.picklbe.global.exception.ErrorCode;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
