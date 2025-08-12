@@ -50,7 +50,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/quiz/daily/answer")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/quiz/daily/admin/force-generate")
-                    .hasRole("ADMIN")
+                    .permitAll()
                     .requestMatchers("/api/**")
                     .permitAll()
                     .requestMatchers("/actuator/**", "/debug/cache/**")
