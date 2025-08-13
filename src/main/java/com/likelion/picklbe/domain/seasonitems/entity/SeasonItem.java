@@ -2,7 +2,15 @@ package com.likelion.picklbe.domain.seasonitems.entity;
 
 import java.util.List;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
 import com.likelion.picklbe.domain.seasonitems.recipe.entity.Recipe;
 
@@ -19,6 +27,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Table(name = "SeasonItem")
 public class SeasonItem {
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -29,14 +38,14 @@ public class SeasonItem {
   @Column(name = "shortDescription", nullable = false)
   private String shortDescription;
 
-  @Column(name = "carbohydratePercent", nullable = false)
-  private int carbohydratePercent;
+  @Column(name = "calorie", nullable = false)
+  private String calorie; // 칼로리
 
-  @Column(name = "proteinPercent", nullable = false)
-  private int proteinPercent;
+  @Column(name = "representativeNutrient", nullable = false)
+  private String representativeNutrient; // 대표 영양소
 
-  @Column(name = "fatPercent", nullable = false)
-  private int fatPercent;
+  @Column(name = "inSeasonMonth", nullable = false)
+  private Integer inSeasonMonth; // 제철인 달
 
   @Lob
   @Column(name = "howToChoose", nullable = false)
