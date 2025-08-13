@@ -33,17 +33,30 @@ public class S3Config {
   @Value("${cloud.aws.s3.bucket}")
   private String bucket;
 
-  @Value("${cloud.aws.s3.path.user}")
-  private String userFolder;
+  // 1~8월 폴더만 유지
+  @Value("${cloud.aws.s3.path.m01}")
+  private String m01Folder;
 
-  @Value("${cloud.aws.s3.path.store}")
-  private String storeFolder;
+  @Value("${cloud.aws.s3.path.m02}")
+  private String m02Folder;
 
-  @Value("${cloud.aws.s3.path.reward}")
-  private String rewardFolder;
+  @Value("${cloud.aws.s3.path.m03}")
+  private String m03Folder;
 
-  @Value("${cloud.aws.s3.path.menu}")
-  private String menuFolder;
+  @Value("${cloud.aws.s3.path.m04}")
+  private String m04Folder;
+
+  @Value("${cloud.aws.s3.path.m05}")
+  private String m05Folder;
+
+  @Value("${cloud.aws.s3.path.m06}")
+  private String m06Folder;
+
+  @Value("${cloud.aws.s3.path.m07}")
+  private String m07Folder;
+
+  @Value("${cloud.aws.s3.path.m08}")
+  private String m08Folder;
 
   @PostConstruct
   public void init() {
