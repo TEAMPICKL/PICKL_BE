@@ -80,9 +80,24 @@ public class QuizService {
     DailyQuiz quiz = getOrThrowTodayQuiz();
 
     boolean correct = (quiz.getAnswer().booleanValue() == userAnswer);
-    int awarded = correct ? QUIZ_REWARD : 0;
 
-    // record attempt
+    // 포인트/지갑 처리 (idempotent)
+    int awarded = 0;
+    Long walletBalance = null;
+
+    if (correct) {
+      // 정답인 경우에만 일일 퀴즈 적립을 시도 (중복 적립 방지)
+      boolean firstTime = pointService.earnDailyQuizOnce(userId, (long) QUIZ_REWARD, quiz.getId());
+      if (firstTime) {
+        awarded = QUIZ_REWARD;
+        // 적립 직후 잔액 조회 (earnDailyQuizOnce가 잔액을 리턴하도록 확장 가능)
+        walletBalance = pointService.getBalance(userId);
+      }
+      // firstTime=false 면 이미 적립한 케이스 → awarded=0, walletBalance=null 유지
+      // 필요 시 DTO에 'alreadyRewarded' 같은 플래그 추가 가능
+    }
+
+    // 시도 기록
     QuizAttempt attempt = new QuizAttempt();
     attempt.setUserId(userId);
     attempt.setQuizDate(today);
@@ -91,11 +106,6 @@ public class QuizService {
     attempt.setIsCorrect(correct);
     attempt.setPointsAwarded(awarded);
     attemptRepo.save(attempt);
-
-    Long walletBalance = null;
-    if (awarded > 0) {
-      walletBalance = pointService.addPoints(userId, awarded, "QUIZ_DAILY", attempt.getId());
-    }
 
     return new AnswerResult(
         correct ? "CORRECT" : "WRONG", awarded, walletBalance, quiz.getIngredient().getId());
@@ -108,7 +118,7 @@ public class QuizService {
 
     private String result; // CORRECT | WRONG
     private Integer awarded;
-    private Long walletBalance; // null if 0
+    private Long walletBalance; // null if 0 or 미적립
     private Long ingredientId;
   }
 }

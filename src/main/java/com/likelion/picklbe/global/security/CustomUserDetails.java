@@ -20,6 +20,11 @@ public class CustomUserDetails implements UserDetails {
     this.user = user;
   }
 
+  /** 사용자 ID 반환 (컨트롤러에서 @AuthenticationPrincipal(expression = "id") 로 주입 가능) */
+  public Long getId() {
+    return user.getId();
+  }
+
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
     return List.of(new SimpleGrantedAuthority(user.getRole().name()));

@@ -51,6 +51,8 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/quiz/daily/admin/force-generate")
                     .permitAll()
+                    .requestMatchers("/api/points/**")
+                    .authenticated()
                     .requestMatchers("/api/**")
                     .permitAll()
                     .requestMatchers("/actuator/**", "/debug/cache/**")
