@@ -62,7 +62,7 @@ public class QuizController {
         .build();
   }
 
-  @Operation(summary = "오늘의 퀴즈 정답 제출", description = "오늘의 OX 퀴즈에 대한 정답을 제출하고, 결과 및 포인트를 반환합니다.")
+  @Operation(summary = "오늘의 퀴즈 정답 제출", description = "정답을 제출하고, 결과/포인트/다음 이동 정보를 반환합니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "정답 처리 성공"),
     @ApiResponse(responseCode = "400", description = "잘못된 요청 또는 이미 응시함"),
@@ -71,13 +71,25 @@ public class QuizController {
   @PostMapping("/daily/answer")
   public QuizAnswerResult answer(
       @Parameter(hidden = true) @AuthUser Long userId, @Valid @RequestBody QuizAnswerRequest req) {
+
     var result = quizService.answer(userId, req.asBoolean(), req.getIdempotencyKey());
+
+    boolean isCorrect = "CORRECT".equalsIgnoreCase(result.getResult());
+    String cta = isCorrect ? "PRICE_CURRENT" : "PRICE_TODAY";
+    String actionLabel = isCorrect ? "현재가 보기" : "오늘의 가격 보러가기";
+
+    // 프론트 라우트 규칙에 맞춘 경로/딥링크 (예: /price/{ingredientId}?view=current|today)
+    String actionPath =
+        "/price/" + result.getIngredientId() + (isCorrect ? "?view=current" : "?view=today");
+
     return QuizAnswerResult.builder()
         .result(result.getResult())
         .awarded(result.getAwarded())
         .walletBalance(result.getWalletBalance())
-        .cta("PRICE_DETAIL")
         .ingredientId(result.getIngredientId())
+        .cta(cta)
+        .actionPath(actionPath)
+        .actionLabel(actionLabel)
         .build();
   }
 
