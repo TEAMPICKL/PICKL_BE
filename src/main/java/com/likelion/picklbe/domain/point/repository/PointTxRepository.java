@@ -9,4 +9,6 @@ import com.likelion.picklbe.domain.point.entity.PointTx;
 public interface PointTxRepository extends JpaRepository<PointTx, Long> {
 
   Page<PointTx> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+  boolean existsByUserIdAndReasonAndRefId(Long userId, String reason, Long refId);
 }
