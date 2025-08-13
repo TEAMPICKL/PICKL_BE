@@ -1,4 +1,4 @@
-package com.likelion.picklbe.domain.averageprice.service;
+package com.likelion.picklbe.domain.dailypricechange.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,10 +9,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.likelion.picklbe.domain.averageprice.exception.AveragePriceErrorCode;
-import com.likelion.picklbe.domain.averageprice.mapper.AveragePriceMapper;
-import com.likelion.picklbe.domain.averageprice.response.CategoryAveragePriceResponse;
-import com.likelion.picklbe.domain.averageprice.response.ItemPriceResponse;
+import com.likelion.picklbe.domain.dailypricechange.exception.DailyPriceChangeErrorCode;
+import com.likelion.picklbe.domain.dailypricechange.mapper.DailyPriceChangeMapper;
+import com.likelion.picklbe.domain.dailypricechange.response.CategoryDailyPriceChangeResponse;
+import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChangeResponse;
 import com.likelion.picklbe.global.api.kamis.client.KamisPriceClient;
 import com.likelion.picklbe.global.api.kamis.dto.KamisPriceResponse.Item;
 import com.likelion.picklbe.global.api.unsplash.client.UnsplashClient;
@@ -24,16 +24,16 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AveragePriceService {
+public class DailyPriceChangeService {
 
   private final KamisPriceClient kamisPriceClient;
-  private final AveragePriceMapper averagePriceMapper;
+  private final DailyPriceChangeMapper dailyPriceChangeMapper;
   private final UnsplashClient unsplashClient;
 
-  public List<CategoryAveragePriceResponse> getCategoryAverages() {
+  public List<CategoryDailyPriceChangeResponse> getCategoryAverages() {
     List<Item> items =
         Optional.ofNullable(kamisPriceClient.fetchPriceData().getPrice())
-            .orElseThrow(() -> new CustomException(AveragePriceErrorCode.PRICE_DATA_NOT_FOUND));
+            .orElseThrow(() -> new CustomException(DailyPriceChangeErrorCode.PRICE_DATA_NOT_FOUND));
 
     // 1) 소매/도매별로, 2) 그 안에서 카테고리별로 그룹핑
     Map<String, Map<String, List<Item>>> grouped =
@@ -42,7 +42,7 @@ public class AveragePriceService {
                 Collectors.groupingBy(
                     Item::getProductClsName, Collectors.groupingBy(Item::getCategoryCode)));
 
-    List<CategoryAveragePriceResponse> result = new ArrayList<>();
+    List<CategoryDailyPriceChangeResponse> result = new ArrayList<>();
 
     for (var clsEntry : grouped.entrySet()) {
       String clsName = clsEntry.getKey(); // "소매" or "도매"
@@ -56,12 +56,12 @@ public class AveragePriceService {
         // 가격 파싱
         List<Double> latestPrices =
             groupItems.stream()
-                .map(averagePriceMapper::parseLatestPrice)
+                .map(dailyPriceChangeMapper::parseLatestPrice)
                 .filter(p -> p > 0)
                 .toList();
         List<Double> oneDayAgoPrices =
             groupItems.stream()
-                .map(averagePriceMapper::parseOneDayAgoPrice)
+                .map(dailyPriceChangeMapper::parseOneDayAgoPrice)
                 .filter(p -> p > 0)
                 .toList();
 
@@ -69,13 +69,13 @@ public class AveragePriceService {
           continue;
         }
 
-        double avgLatest = averagePriceMapper.avg(latestPrices);
-        double avgPrev = averagePriceMapper.avg(oneDayAgoPrices);
+        double avgLatest = dailyPriceChangeMapper.avg(latestPrices);
+        double avgPrev = dailyPriceChangeMapper.avg(oneDayAgoPrices);
         double diff = avgLatest - avgPrev;
         double rate = avgPrev == 0 ? 0 : (diff / avgPrev) * 100;
 
         result.add(
-            CategoryAveragePriceResponse.builder()
+            CategoryDailyPriceChangeResponse.builder()
                 .productClsName(clsName)
                 .categoryCode(categoryCode)
                 .categoryName(categoryName)
@@ -88,18 +88,18 @@ public class AveragePriceService {
     }
 
     if (result.isEmpty()) {
-      throw new CustomException(AveragePriceErrorCode.PRICE_DATA_NOT_FOUND);
+      throw new CustomException(DailyPriceChangeErrorCode.PRICE_DATA_NOT_FOUND);
     }
     return result;
   }
 
-  public List<ItemPriceResponse> getItemPrices() {
+  public List<ItemDailyPriceChangeResponse> getItemPrices() {
     var items =
         Optional.ofNullable(kamisPriceClient.fetchPriceData().getPrice())
-            .orElseThrow(() -> new CustomException(AveragePriceErrorCode.PRICE_DATA_NOT_FOUND));
+            .orElseThrow(() -> new CustomException(DailyPriceChangeErrorCode.PRICE_DATA_NOT_FOUND));
 
     // 1) 기본 가격 응답 만들기
-    var base = items.stream().map(averagePriceMapper::toItemResponse).toList();
+    var base = items.stream().map(dailyPriceChangeMapper::toItemResponse).toList();
 
     // 2) 같은 품목은 한 번만 검색하도록 요청 단위 캐시
     Map<String, String> imageCache = new HashMap<>();

@@ -1,4 +1,4 @@
-package com.likelion.picklbe.domain.averageprice.entity;
+package com.likelion.picklbe.domain.dailypricechange.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,8 +18,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "AveragePrice")
-public class AveragePrice {
+@Table(name = "DailyPriceChange")
+public class DailyPriceChange {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

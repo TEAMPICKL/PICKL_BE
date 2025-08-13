@@ -1,4 +1,4 @@
-package com.likelion.picklbe.domain.averageprice.response;
+package com.likelion.picklbe.domain.dailypricechange.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -8,7 +8,8 @@ import lombok.Data;
 @Data
 @Builder
 @AllArgsConstructor
-public class CategoryAveragePriceResponse {
+public class CategoryDailyPriceChangeResponse {
+
   @Schema(description = "분류(소매/도매)", example = "소매")
   private String productClsName;
 
