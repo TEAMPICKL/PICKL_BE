@@ -99,8 +99,14 @@ public class S3Service {
   public String createKeyName(PathName pathName) {
 
     return switch (pathName) {
-          case FOLDER1 -> s3Config.getUserFolder();
-          case FOLDER2 -> s3Config.getStoreFolder();
+          case M01 -> s3Config.getM01Folder();
+          case M02 -> s3Config.getM02Folder();
+          case M03 -> s3Config.getM03Folder();
+          case M04 -> s3Config.getM04Folder();
+          case M05 -> s3Config.getM05Folder();
+          case M06 -> s3Config.getM06Folder();
+          case M07 -> s3Config.getM07Folder();
+          case M08 -> s3Config.getM08Folder();
         }
         + '/'
         + UUID.randomUUID();
@@ -131,8 +137,14 @@ public class S3Service {
   public List<String> getAllFiles(PathName pathName) {
     String prefix =
         switch (pathName) {
-          case FOLDER1 -> s3Config.getUserFolder();
-          case FOLDER2 -> s3Config.getStoreFolder();
+          case M01 -> s3Config.getM01Folder();
+          case M02 -> s3Config.getM02Folder();
+          case M03 -> s3Config.getM03Folder();
+          case M04 -> s3Config.getM04Folder();
+          case M05 -> s3Config.getM05Folder();
+          case M06 -> s3Config.getM06Folder();
+          case M07 -> s3Config.getM07Folder();
+          case M08 -> s3Config.getM08Folder();
         };
 
     try {
@@ -152,8 +164,14 @@ public class S3Service {
   public void deleteFile(PathName pathName, String fileName) {
     String prefix =
         switch (pathName) {
-          case FOLDER1 -> s3Config.getUserFolder();
-          case FOLDER2 -> s3Config.getStoreFolder();
+          case M01 -> s3Config.getM01Folder();
+          case M02 -> s3Config.getM02Folder();
+          case M03 -> s3Config.getM03Folder();
+          case M04 -> s3Config.getM04Folder();
+          case M05 -> s3Config.getM05Folder();
+          case M06 -> s3Config.getM06Folder();
+          case M07 -> s3Config.getM07Folder();
+          case M08 -> s3Config.getM08Folder();
         };
     String keyName = prefix + "/" + fileName;
     deleteFile(keyName);

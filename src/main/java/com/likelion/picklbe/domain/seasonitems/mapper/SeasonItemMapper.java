@@ -12,32 +12,32 @@ import com.likelion.picklbe.domain.seasonitems.entity.SeasonItem;
 @Component
 public class SeasonItemMapper {
 
-  public SeasonItemSummaryDto toSummaryDto(SeasonItem seasonItem) {
+  public SeasonItemSummaryDto toSummaryDto(SeasonItem s) {
     return SeasonItemSummaryDto.builder()
-        .id(seasonItem.getId())
-        .itemname(seasonItem.getItemname())
-        .shortDescription(seasonItem.getShortDescription())
-        .imageUrl(seasonItem.getImageUrl())
+        .id(s.getId())
+        .itemname(s.getItemname())
+        .shortDescription(s.getShortDescription())
+        .seasonMonth(s.getInSeasonMonth())
+        .imageUrl(s.getImageUrl())
         .build();
   }
 
-  public SeasonItemDetailDto toDetailDto(SeasonItem seasonItem) {
+  public SeasonItemDetailDto toDetailDto(SeasonItem s) {
     return SeasonItemDetailDto.builder()
-        .id(seasonItem.getId())
-        .itemname(seasonItem.getItemname())
-        .shortDescription(seasonItem.getShortDescription())
-        .carbohydratePercent(seasonItem.getCarbohydratePercent())
-        .proteinPercent(seasonItem.getProteinPercent())
-        .fatPercent(seasonItem.getFatPercent())
-        .howToChoose(seasonItem.getHowToChoose())
-        .howToStore(seasonItem.getHowToStore())
-        .howToTrim(seasonItem.getHowToTrim())
-        .tip(seasonItem.getTip())
-        .imageUrl(seasonItem.getImageUrl())
+        .id(s.getId())
+        .itemname(s.getItemname())
+        .shortDescription(s.getShortDescription())
+        .representativeNutrient(s.getRepresentativeNutrient())
+        .calorie(s.getCalorie())
+        .howToChoose(s.getHowToChoose())
+        .howToStore(s.getHowToStore())
+        .howToTrim(s.getHowToTrim())
+        .tip(s.getTip())
+        .imageUrl(s.getImageUrl())
         .build();
   }
 
-  public List<SeasonItemSummaryDto> toSummaryDtoList(List<SeasonItem> seasonItems) {
-    return seasonItems.stream().map(this::toSummaryDto).collect(Collectors.toList());
+  public List<SeasonItemSummaryDto> toSummaryDtoList(List<SeasonItem> list) {
+    return list.stream().map(this::toSummaryDto).collect(Collectors.toList());
   }
 }

@@ -1,7 +1,10 @@
 package com.likelion.picklbe.domain.seasonitems.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Builder
@@ -15,17 +18,14 @@ public class SeasonItemDetailDto {
   @Schema(description = "제철 식재료 이름", example = "옥수수")
   private String itemname;
 
-  @Schema(description = "제철 식재료 한 줄 소개", example = "지금이 딱 제철이에요!")
+  @Schema(description = "제철 식재료 한 줄 소개", example = "탱글한 식감과 고소함이 살아있는 여름 간식")
   private String shortDescription;
 
-  @Schema(description = "탄수화물 비율 (%)", example = "76")
-  private int carbohydratePercent;
+  @Schema(description = "대표 영양소", example = "탄수화물")
+  private String representativeNutrient;
 
-  @Schema(description = "단백질 비율 (%)", example = "13")
-  private int proteinPercent;
-
-  @Schema(description = "지방 비율 (%)", example = "11")
-  private int fatPercent;
+  @Schema(description = "칼로리", example = "100g당 86kcal")
+  private String calorie;
 
   @Schema(description = "고르는 방법", example = "껍질이 촉촉하고 선명한 연녹색을 띄는 것")
   private String howToChoose;
