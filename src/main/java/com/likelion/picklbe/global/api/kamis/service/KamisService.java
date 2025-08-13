@@ -1,24 +1,21 @@
 package com.likelion.picklbe.global.api.kamis.service;
 
+import com.likelion.picklbe.domain.dailypricechange.mapper.DailyPriceChangeMapper;
+import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChangeResponse;
+import com.likelion.picklbe.global.api.kamis.client.KamisPriceClient;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-
-import com.likelion.picklbe.domain.averageprice.mapper.AveragePriceMapper;
-import com.likelion.picklbe.domain.averageprice.response.ItemPriceResponse;
-import com.likelion.picklbe.global.api.kamis.client.KamisPriceClient;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class KamisService {
 
   private final KamisPriceClient kamisPriceClient;
-  private final AveragePriceMapper mapper;
+  private final DailyPriceChangeMapper mapper;
 
-  public List<ItemPriceResponse> getAllPriceInfo() {
+  public List<ItemDailyPriceChangeResponse> getAllPriceInfo() {
     return kamisPriceClient.fetchPriceData().getPrice().stream()
         // latestPrice 리스트에 첫 요소가 유효한 경우만
         .filter(
