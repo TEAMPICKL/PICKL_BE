@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.likelion.picklbe.domain.quiz.dto.QuizAnswerRequest;
 import com.likelion.picklbe.domain.quiz.dto.QuizAnswerResult;
-import com.likelion.picklbe.domain.quiz.dto.QuizDailyResponse;
+import com.likelion.picklbe.domain.quiz.dto.request.QuizAnswerRequest;
+import com.likelion.picklbe.domain.quiz.dto.response.QuizDailyResponse;
 import com.likelion.picklbe.domain.quiz.entity.DailyQuiz;
 import com.likelion.picklbe.domain.quiz.repository.DailyQuizRepository;
 import com.likelion.picklbe.domain.quiz.repository.QuizAttemptRepository;
