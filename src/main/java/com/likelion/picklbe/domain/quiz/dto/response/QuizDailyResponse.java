@@ -1,4 +1,4 @@
-package com.likelion.picklbe.domain.quiz.dto;
+package com.likelion.picklbe.domain.quiz.dto.response;
 
 import java.util.List;
 
