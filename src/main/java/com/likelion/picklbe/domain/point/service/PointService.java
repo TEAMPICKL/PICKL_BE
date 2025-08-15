@@ -20,28 +20,37 @@ public class PointService {
 
   private final PointWalletRepository walletRepo;
   private final PointTxRepository txRepo;
+  private static final long DEFAULT_BALANCE = 30_000L;
 
-  /** 지갑 없으면 0원으로 생성 후 반환 */
+  /**
+   * 지갑 없으면 30000원으로 생성 후 반환
+   */
   @Transactional
   public PointWallet getOrCreateWallet(Long userId) {
-    return walletRepo
-        .findById(userId)
-        .orElseGet(
-            () -> {
-              PointWallet w = new PointWallet();
-              w.setUserId(userId);
-              w.setBalance(30000L);
-              return walletRepo.save(w);
-            });
+    return walletRepo.findById(userId)
+        .orElseGet(() -> createWalletWithDefaultBalance(userId));
   }
 
-  /** 현재 잔액 조회(없으면 0) */
+  private PointWallet createWalletWithDefaultBalance(Long userId) {
+    PointWallet wallet = new PointWallet();
+    wallet.setUserId(userId);
+    wallet.setBalance(DEFAULT_BALANCE);
+    return walletRepo.save(wallet);
+  }
+
+  /**
+   * 현재 잔액 조회(없으면 0)
+   */
   @Transactional(readOnly = true)
   public long getBalance(Long userId) {
-    return walletRepo.findById(userId).map(PointWallet::getBalance).orElse(0L);
+    return walletRepo.findById(userId)
+        .map(PointWallet::getBalance)
+        .orElse(0L);
   }
 
-  /** 내역 페이지 조회 */
+  /**
+   * 내역 페이지 조회
+   */
   @Transactional(readOnly = true)
   public Page<PointTx> getHistory(Long userId, Pageable pageable) {
     return txRepo.findByUserIdOrderByCreatedAtDesc(userId, pageable);
