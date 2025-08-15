@@ -30,7 +30,7 @@ public class PointService {
             () -> {
               PointWallet w = new PointWallet();
               w.setUserId(userId);
-              w.setBalance(0L);
+              w.setBalance(30000L);
               return walletRepo.save(w);
             });
   }
