@@ -24,4 +24,10 @@ public class Ingredient {
   private String name;
 
   private String iconUrl;
+
+  @Column(name = "thumbnail_url", length = 255)
+  private String thumbnailUrl;
+
+  @Column(name = "short_desc", length = 255)
+  private String shortDesc;
 }

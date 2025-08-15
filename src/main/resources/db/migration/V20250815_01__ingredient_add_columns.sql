@@ -1,0 +1,3 @@
+ALTER TABLE ingredient
+    ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR(255) NULL,
+    ADD COLUMN IF NOT EXISTS short_desc    VARCHAR(255) NULL;

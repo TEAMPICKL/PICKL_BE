@@ -9,6 +9,11 @@ import lombok.*;
 @Entity
 @Table(
     name = "favorites",
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uk_fav_user_type_target",
+          columnNames = {"user_id", "type", "target_id"})
+    },
     indexes = {@Index(name = "idx_fav_user_type", columnList = "user_id,type")})
 @Getter
 @Setter
@@ -30,7 +35,11 @@ public class Favorite {
   private FavoriteType type; // INGREDIENT / RECIPE
 
   @Column(name = "target_id", nullable = false)
-  private Long targetId; // 찜 대상 PK (재료ID/레시피ID)
+  private Long targetId;
+
+  @Column(nullable = false, updatable = false)
+  @org.hibernate.annotations.CreationTimestamp
+  private java.time.LocalDateTime createdAt;
 
   public enum FavoriteType {
     INGREDIENT,
