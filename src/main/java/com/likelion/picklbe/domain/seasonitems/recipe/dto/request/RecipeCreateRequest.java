@@ -1,5 +1,7 @@
 package com.likelion.picklbe.domain.seasonitems.recipe.dto.request;
 
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,4 +31,10 @@ public class RecipeCreateRequest {
   @Schema(description = "레시피 꿀팁", example = "기름을 두르고 약불에 천천히 익히세요")
   @NotBlank
   private String tip;
+
+  @Schema(description = "조리 시간(문자열)", example = "약 7~10분")
+  private String cookingTime; // 문자열 그대로 받음
+
+  @Schema(description = "추천 분류(배열)", example = "[\"간식\",\"아침\"]")
+  private List<String> recommendTags; // 배열로 받되 DB에는 CSV로 저장
 }
