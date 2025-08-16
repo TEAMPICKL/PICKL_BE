@@ -14,10 +14,14 @@ public interface QuizPoolRepository extends JpaRepository<QuizPool, Long> {
 
   @Query(
       """
-      SELECT q FROM QuizPool q
-      WHERE q.isActive = true
-        AND (q.lastUsedDate IS NULL OR q.lastUsedDate <= :threshold)
-      ORDER BY function('RAND')
-      """)
+          SELECT q FROM QuizPool q
+          WHERE q.isActive = true
+            AND (q.lastUsedDate IS NULL OR q.lastUsedDate <= :threshold)
+          ORDER BY function('RAND')
+          """)
   List<QuizPool> findPickableRandom(@Param("threshold") LocalDate threshold, Pageable pageable);
+
+  // 전체에서 랜덤 (폴백)
+  @Query("select qp from QuizPool qp order by function('rand')")
+  List<QuizPool> findRandom(Pageable pageable);
 }
