@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
-
 import reactor.core.publisher.Mono;
 
 @Configuration
@@ -14,7 +13,7 @@ public class WebClientConfig {
   @Bean
   WebClient langchainWebClient(
       WebClient.Builder builder, @Value("${langchain.base-url}") String baseUrl) {
-    System.out.println("[LangChain BASE] " + baseUrl); // ✅ 시작 시 출력
+    System.out.println("[LangChain BASE] " + baseUrl);
     return builder
         .baseUrl(baseUrl)
         .filter(
