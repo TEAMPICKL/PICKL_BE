@@ -14,7 +14,7 @@ public class WebClientConfig {
   @Bean
   WebClient langchainWebClient(
       WebClient.Builder builder, @Value("${langchain.base-url}") String baseUrl) {
-    System.out.println("[LangChain BASE] " + baseUrl); // ✅ 시작 시 출력
+    System.out.println("[LangChain BASE] " + baseUrl);
     return builder
         .baseUrl(baseUrl)
         .filter(

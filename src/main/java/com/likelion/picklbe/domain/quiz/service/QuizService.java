@@ -52,33 +52,34 @@ public class QuizService {
 
     return dailyQuizRepo
         .findByQuizDate(today)
-        .orElseGet(() -> {
-          // 1차: 최근 N일 미사용 후보
-          LocalDate threshold = today.minusDays(N_DAYS_NO_REPEAT);
-          List<QuizPool> candidates =
-              quizPoolRepo.findPickableRandom(threshold, PageRequest.of(0, 10));
+        .orElseGet(
+            () -> {
+              // 1차: 최근 N일 미사용 후보
+              LocalDate threshold = today.minusDays(N_DAYS_NO_REPEAT);
+              List<QuizPool> candidates =
+                  quizPoolRepo.findPickableRandom(threshold, PageRequest.of(0, 10));
 
-          // 2차 폴백: 전체에서 랜덤
-          if (candidates.isEmpty()) {
-            candidates = quizPoolRepo.findRandom(PageRequest.of(0, 10));
-          }
+              // 2차 폴백: 전체에서 랜덤
+              if (candidates.isEmpty()) {
+                candidates = quizPoolRepo.findRandom(PageRequest.of(0, 10));
+              }
 
-          if (candidates.isEmpty()) {
-            // DB에 퀴즈풀이 정말 하나도 없는 상황
-            throw ApiException.of(ErrorCode.QUIZ_POOL_EMPTY);
-          }
+              if (candidates.isEmpty()) {
+                // DB에 퀴즈풀이 정말 하나도 없는 상황
+                throw ApiException.of(ErrorCode.QUIZ_POOL_EMPTY);
+              }
 
-          QuizPool picked = candidates.get(0);
-          picked.setLastUsedDate(today); // dirty checking 으로 반영됨
+              QuizPool picked = candidates.get(0);
+              picked.setLastUsedDate(today); // dirty checking 으로 반영됨
 
-          DailyQuiz dq = new DailyQuiz();
-          dq.setQuizDate(today);
-          dq.setQuizPool(picked);
-          dq.setIngredient(picked.getIngredient());
-          dq.setStatement(picked.getStatement());
-          dq.setAnswer(picked.getAnswer());
-          return dailyQuizRepo.save(dq);
-        });
+              DailyQuiz dq = new DailyQuiz();
+              dq.setQuizDate(today);
+              dq.setQuizPool(picked);
+              dq.setIngredient(picked.getIngredient());
+              dq.setStatement(picked.getStatement());
+              dq.setAnswer(picked.getAnswer());
+              return dailyQuizRepo.save(dq);
+            });
   }
 
   @Transactional
@@ -120,9 +121,9 @@ public class QuizService {
   @AllArgsConstructor
   public static class AnswerResult {
 
-    private String result;        // CORRECT | WRONG
-    private Integer awarded;      // 적립 포인트
-    private Long walletBalance;   // 적립 후 잔액 (null 가능)
+    private String result; // CORRECT | WRONG
+    private Integer awarded; // 적립 포인트
+    private Long walletBalance; // 적립 후 잔액 (null 가능)
     private Long ingredientId;
   }
 }

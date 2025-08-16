@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -33,6 +33,7 @@ import com.likelion.picklbe.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -41,9 +42,8 @@ public class ChatbotService {
   private final ConversationRepository conversationRepo;
   private final MessageRepository messageRepo;
   private final UserMemoryRepository memoryRepo;
-  private final WebClient langchainWebClient; // WebClientConfig에서 주입
+  private final WebClient langchainWebClient;
 
-  // 인플라이트 가드
   private final java.util.Set<Long> inflightConversations =
       java.util.concurrent.ConcurrentHashMap.newKeySet();
   private final java.util.Set<Long> inflightNewConvByUser =
@@ -99,7 +99,7 @@ public class ChatbotService {
                     .map(body -> new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED)))
         .bodyToMono(TitleRes.class)
         .timeout(Duration.ofMillis(timeoutMs))
-        .onErrorResume(e -> reactor.core.publisher.Mono.empty())
+        .onErrorResume(e -> Mono.empty())
         .subscribe(
             res -> {
               if (res != null && res.title() != null && !res.title().isBlank()) {
@@ -242,25 +242,60 @@ public class ChatbotService {
                 .event("conversationId")
                 .build());
 
-    // ---- 업스트림: SSE 이벤트 단위로 파싱 (단일 호출만!)
-    Flux<ServerSentEvent<String>> raw =
+    // ---- 업스트림: 원문 청크(String) → 줄 분리 → data:만 추출 ----
+    final StringBuilder carry = new StringBuilder(); // 청크 경계에서 끊긴 줄 보관
+
+    Flux<String> upstream =
         langchainWebClient
             .post()
             .uri("/chat/history/stream")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.TEXT_EVENT_STREAM)
-            .header(org.springframework.http.HttpHeaders.ACCEPT_ENCODING, "identity")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity")
             .bodyValue(payload)
             .retrieve()
-            .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
-            .timeout(Duration.ofMinutes(5));
-
-    // done에서 즉시 완료, data만 토큰으로 방출
-    Flux<String> upstream =
-        raw.takeUntil(evt -> "done".equals(evt.event())) // done 이벤트가 들어오면 그 이벤트까지 포함하고 완료
-            .filter(evt -> !"done".equals(evt.event())) // 하지만 done 이벤트 자체는 내보내지 않음
-            .map(ServerSentEvent::data)
-            .filter(data -> data != null && !data.isBlank())
+            .onStatus(
+                HttpStatusCode::isError,
+                rsp ->
+                    rsp.bodyToMono(String.class)
+                        .flatMap(
+                            body ->
+                                Mono.error(
+                                    new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED))))
+            .bodyToFlux(String.class) // <- String 청크
+            .flatMap(
+                chunk -> {
+                  // 청크를 '\n' 기준 라인으로 안전하게 분할
+                  List<String> out = new ArrayList<>();
+                  carry.append(chunk);
+                  int idx;
+                  while ((idx = indexOfNewline(carry)) >= 0) {
+                    String line = carry.substring(0, idx);
+                    if (!line.isEmpty() && line.charAt(line.length() - 1) == '\r') {
+                      line = line.substring(0, line.length() - 1);
+                    }
+                    out.add(line);
+                    // '\n' 소비
+                    carry.delete(0, idx + 1);
+                  }
+                  return Flux.fromIterable(out);
+                })
+            .concatWith(
+                Flux.defer(
+                    () -> {
+                      // 스트림 종료 시 남은 마지막 라인 방출
+                      if (carry.length() > 0) {
+                        String last = carry.toString();
+                        carry.setLength(0);
+                        return Flux.just(last);
+                      }
+                      return Flux.empty();
+                    }))
+            // data: 라인만 추출
+            .filter(line -> line.startsWith("data:"))
+            .map(line -> line.substring(5).trim())
+            .filter(s -> !s.isBlank())
+            .timeout(Duration.ofMinutes(5))
             .onErrorResume(
                 t ->
                     (t instanceof reactor.netty.http.client.PrematureCloseException
@@ -309,6 +344,16 @@ public class ChatbotService {
                             .build()));
 
     return Flux.concat(first, body);
+  }
+
+  // 줄바꿈 인덱스 찾기(\n), 못 찾으면 -1
+  private static int indexOfNewline(StringBuilder sb) {
+    for (int i = 0; i < sb.length(); i++) {
+      if (sb.charAt(i) == '\n') {
+        return i;
+      }
+    }
+    return -1;
   }
 
   // ----- 상세 조회 -----
