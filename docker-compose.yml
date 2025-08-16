@@ -24,7 +24,15 @@ services:
 
   langchain:
     image: ${DOCKER_USERNAME}/${CHATBOT_REPO}:${CHATBOT_TAG:-latest}
-    env_file: .env
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL}
+
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}  # <= 여기서는 치환 됨!
+      DB_NAME: pickl
     command: [ "uvicorn","app.main:app","--host","0.0.0.0","--port","8000" ]  # ← 추가
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
@@ -62,19 +70,6 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - app
-    networks:
-      - pickl-network
-
-  dozzle:
-    image: amir20/dozzle:latest
-    container_name: dozzle
-    restart: unless-stopped
-    environment:
-      - DOZZLE_BASE=/dozzle
-      - DOZZLE_AUTH_PROVIDER=simple
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./dozzle/users.yml:/data/users.yml:ro
     networks:
       - pickl-network
 
