@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -242,10 +243,8 @@ public class ChatbotService {
                 .event("conversationId")
                 .build());
 
-    // ---- 업스트림: 원문 청크(String) → 줄 분리 → data:만 추출 ----
-    final StringBuilder carry = new StringBuilder(); // 청크 경계에서 끊긴 줄 보관
-
-    Flux<String> upstream =
+    // ---- 업스트림: SSE 이벤트로 직접 디코드 ----
+    Flux<ServerSentEvent<String>> raw =
         langchainWebClient
             .post()
             .uri("/chat/history/stream")
@@ -254,48 +253,15 @@ public class ChatbotService {
             .header(HttpHeaders.ACCEPT_ENCODING, "identity")
             .bodyValue(payload)
             .retrieve()
-            .onStatus(
-                HttpStatusCode::isError,
-                rsp ->
-                    rsp.bodyToMono(String.class)
-                        .flatMap(
-                            body ->
-                                Mono.error(
-                                    new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED))))
-            .bodyToFlux(String.class) // <- String 청크
-            .flatMap(
-                chunk -> {
-                  // 청크를 '\n' 기준 라인으로 안전하게 분할
-                  List<String> out = new ArrayList<>();
-                  carry.append(chunk);
-                  int idx;
-                  while ((idx = indexOfNewline(carry)) >= 0) {
-                    String line = carry.substring(0, idx);
-                    if (!line.isEmpty() && line.charAt(line.length() - 1) == '\r') {
-                      line = line.substring(0, line.length() - 1);
-                    }
-                    out.add(line);
-                    // '\n' 소비
-                    carry.delete(0, idx + 1);
-                  }
-                  return Flux.fromIterable(out);
-                })
-            .concatWith(
-                Flux.defer(
-                    () -> {
-                      // 스트림 종료 시 남은 마지막 라인 방출
-                      if (carry.length() > 0) {
-                        String last = carry.toString();
-                        carry.setLength(0);
-                        return Flux.just(last);
-                      }
-                      return Flux.empty();
-                    }))
-            // data: 라인만 추출
-            .filter(line -> line.startsWith("data:"))
-            .map(line -> line.substring(5).trim())
-            .filter(s -> !s.isBlank())
-            .timeout(Duration.ofMinutes(5))
+            .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+            .timeout(Duration.ofMinutes(5));
+
+    // done에서 즉시 완료, data만 토큰으로 방출
+    Flux<String> upstream =
+        raw.takeUntil(evt -> "done".equals(evt.event())) // done 이벤트까지 받고 스트림 종료
+            .filter(evt -> !"done".equals(evt.event())) // done 이벤트 자체는 버림
+            .map(ServerSentEvent::data) // data 추출
+            .filter(data -> data != null && !data.isBlank())
             .onErrorResume(
                 t ->
                     (t instanceof reactor.netty.http.client.PrematureCloseException
