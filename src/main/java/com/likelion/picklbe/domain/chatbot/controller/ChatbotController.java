@@ -2,7 +2,9 @@ package com.likelion.picklbe.domain.chatbot.controller;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,7 @@ import com.likelion.picklbe.global.response.BaseResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
 
 @Tag(name = "Chatbot", description = "챗봇 대화 API")
 @RestController
@@ -30,10 +33,16 @@ public class ChatbotController {
   private final ChatbotService service;
 
   @Operation(summary = "챗봇 대화", description = "첫 턴은 conversationId=null 로 호출합니다.")
-  @PostMapping("/chat")
+  @PostMapping("/chat/")
   public ResponseEntity<BaseResponse<ChatResponse>> chat(@RequestBody @Valid ChatRequest req) {
     ChatResponse res = service.chat(req);
     return ResponseEntity.ok(BaseResponse.success("ok", res));
+  }
+
+  @Operation(summary = "챗봇 대화(스트리밍)", description = "토큰 단위 SSE 스트리밍")
+  @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public Flux<ServerSentEvent<String>> chatStream(@RequestBody @Valid ChatRequest req) {
+    return service.chatStream(req);
   }
 
   @Operation(
