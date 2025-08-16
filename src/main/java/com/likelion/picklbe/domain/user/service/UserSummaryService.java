@@ -8,7 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.likelion.picklbe.domain.favorite.entity.Favorite.FavoriteType;
 import com.likelion.picklbe.domain.favorite.repository.FavoriteRepository;
 import com.likelion.picklbe.domain.history.repository.PickleHistoryRepository;
-import com.likelion.picklbe.domain.point.repository.PointRepository;
+import com.likelion.picklbe.domain.point.entity.PointWallet;
+import com.likelion.picklbe.domain.point.repository.PointWalletRepository;
 import com.likelion.picklbe.domain.user.dto.response.UserSummaryResponse;
 import com.likelion.picklbe.domain.user.entity.User;
 import com.likelion.picklbe.domain.user.repository.UserRepository;
@@ -21,24 +22,27 @@ import lombok.RequiredArgsConstructor;
 public class UserSummaryService {
 
   private final UserRepository userRepository;
-  private final FavoriteRepository favoriteRepository; // 네 프로젝트의 실제 레포로 바꿔줘
-  private final PointRepository pointRepository; // 동일
+  private final FavoriteRepository favoriteRepository;
   private final PickleHistoryRepository historyRepository;
+  private final PointWalletRepository pointWalletRepository; // ← 추가
 
   @Transactional(readOnly = true)
   public UserSummaryResponse get(Long userId) {
     User u = userRepository.findById(userId).orElseThrow();
 
     long days = FriendDays.sinceInclusive(u.getCreatedAt().atZone(ZoneId.of("UTC")).toInstant());
-    long points = pointRepository.sumByUserId(userId);
+
+    // 잔액은 지갑에서 직접 조회
+    long points = pointWalletRepository.findById(userId).map(PointWallet::getBalance).orElse(0L);
+
     int favIng = favoriteRepository.countByUserIdAndType(userId, FavoriteType.INGREDIENT);
     int favRec = favoriteRepository.countByUserIdAndType(userId, FavoriteType.RECIPE);
     int hist = historyRepository.countByUserId(userId);
-    // region/nickname은 실제 필드에 맞게 치환
+
     return UserSummaryResponse.builder()
         .nickname(u.getNickname() != null ? u.getNickname() : u.getUsername())
-        .region(null)
-        .points(points)
+        .region(null) // 실제 필드에 맞게 치환
+        .points(points) // ← 지갑 잔액 기준
         .daysSinceFriend(days)
         .favoriteIngredientCount(favIng)
         .favoriteRecipeCount(favRec)
