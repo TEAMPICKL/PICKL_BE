@@ -250,7 +250,7 @@ public class ChatbotService {
             .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {
             })
             .timeout(Duration.ofMinutes(5))
-            // 🔎 여기! 원시 SSE 이벤트를 그대로 로그
+            // 디버그 로그
             .doOnSubscribe(s -> System.out.println("[SSE-UP][subscribe] conv=" + conv.getId()))
             .doOnNext(evt ->
                 System.out.println("[SSE-UP][raw] event=" + evt.event() + " data=" + evt.data()))
@@ -259,27 +259,27 @@ public class ChatbotService {
                     "[SSE-UP][raw][error] " + e.getClass().getName() + ": " + e.getMessage()))
             .doOnComplete(() -> System.out.println("[SSE-UP][raw] complete"));
 
-    // done에서 즉시 완료, data만 토큰으로 방출
+// done에서 즉시 완료, data만 토큰으로 방출
     Flux<String> upstream =
         raw
-            .takeUntil(evt -> "done".equals(evt.event()))     // done 이벤트까지 받고 스트림 종료
-            .filter(evt -> !"done".equals(evt.event()))       // done 이벤트 자체는 버림
-            .map(ServerSentEvent::data)                       // data 추출
-            .filter(data -> data != null && !data.isBlank())
-            // 🔎 토큰 로그
+            .takeUntil(evt -> "done".equals(evt.event()))     // done 이벤트가 오면 그 시점에 완료
+            .filter(evt -> evt != null && evt.data() != null) // 👈 NPE 방지: data==null 프레임 제거
+            .map(ServerSentEvent::data)                       // 이제 null 아님
+            .filter(s -> !s.isBlank())                        // 공백 토큰 제거
             .doOnNext(tok -> System.out.println("[SSE-UP][token] \"" + tok + "\""))
-            .onErrorResume(t -> {
-              System.err.println(
-                  "[SSE-UP][token][error] " + t.getClass().getName() + ": " + t.getMessage());
-              if (t instanceof reactor.netty.http.client.PrematureCloseException
-                  || t instanceof java.util.concurrent.TimeoutException
-                  || (
-                  t instanceof org.springframework.web.reactive.function.client.WebClientResponseException w
-                      && w.getCause() instanceof reactor.netty.http.client.PrematureCloseException)) {
-                return Flux.empty(); // 네트워크 조기종료/타임아웃은 무시
-              }
-              return Flux.error(t);
-            });
+            .onErrorResume(
+                t -> {
+                  System.err.println(
+                      "[SSE-UP][token][error] " + t.getClass().getName() + ": " + t.getMessage());
+                  if (t instanceof reactor.netty.http.client.PrematureCloseException
+                      || t instanceof java.util.concurrent.TimeoutException
+                      || (
+                      t instanceof org.springframework.web.reactive.function.client.WebClientResponseException w
+                          && w.getCause() instanceof reactor.netty.http.client.PrematureCloseException)) {
+                    return Flux.empty();
+                  }
+                  return Flux.error(t);
+                });
 
     StringBuilder acc = new StringBuilder();
 
