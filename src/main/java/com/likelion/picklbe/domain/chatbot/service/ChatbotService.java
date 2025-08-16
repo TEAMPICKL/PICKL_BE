@@ -1,21 +1,5 @@
 package com.likelion.picklbe.domain.chatbot.service;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatRequest;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatResponse;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ConversationDetailResponse;
@@ -31,8 +15,21 @@ import com.likelion.picklbe.domain.chatbot.repository.ConversationRepository;
 import com.likelion.picklbe.domain.chatbot.repository.MessageRepository;
 import com.likelion.picklbe.domain.chatbot.repository.UserMemoryRepository;
 import com.likelion.picklbe.global.exception.CustomException;
-
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -81,9 +78,13 @@ public class ChatbotService {
   }
 
   // (선택) 새 대화 제목 생성 – 실패해도 무시
-  private record TitleReq(String message, String memory, int max_len) {}
+  private record TitleReq(String message, String memory, int max_len) {
 
-  private record TitleRes(String title) {}
+  }
+
+  private record TitleRes(String title) {
+
+  }
 
   private void tryUpdateSmartTitleAsync(String firstMessage, Long userId, Conversation conv) {
     var memory = buildMemoryBlock(userId);
@@ -186,7 +187,6 @@ public class ChatbotService {
 
     final boolean isNewRequest = (req.conversationId() == null);
 
-    // ① 새 대화 동시 생성 가드 (userId당 1개)
     if (isNewRequest) {
       boolean ok = inflightNewConvByUser.add(req.userId());
       if (!ok) {
@@ -195,13 +195,12 @@ public class ChatbotService {
       }
     }
 
-    // 대화 로드/생성
     Conversation conv;
     try {
       conv =
           isNewRequest
               ? conversationRepo.save(
-                  Conversation.builder().userId(req.userId()).title("대화").build())
+              Conversation.builder().userId(req.userId()).title("대화").build())
               : conversationRepo
                   .findByIdAndUserId(req.conversationId(), req.userId())
                   .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
@@ -212,7 +211,6 @@ public class ChatbotService {
       throw e;
     }
 
-    // ② 같은 conversationId 동시 스트림 가드
     if (!inflightConversations.add(conv.getId())) {
       if (isNewRequest) {
         inflightNewConvByUser.remove(req.userId());
@@ -220,7 +218,6 @@ public class ChatbotService {
       return Flux.just(ServerSentEvent.<String>builder("already-streaming").event("busy").build());
     }
 
-    // 사용자 발화 저장
     messageRepo.save(
         Message.builder()
             .conversationId(conv.getId())
@@ -232,16 +229,13 @@ public class ChatbotService {
       tryUpdateSmartTitleAsync(req.message(), req.userId(), conv);
     }
 
-    // 히스토리 + 메모리
     List<Turn> turns = buildTurns(conv.getId());
     var payload = new HistoryReq(turns, buildMemoryBlock(req.userId()));
 
     // 첫 이벤트: conversationId
     Flux<ServerSentEvent<String>> first =
-        Flux.just(
-            ServerSentEvent.<String>builder(String.valueOf(conv.getId()))
-                .event("conversationId")
-                .build());
+        Flux.just(ServerSentEvent.<String>builder(String.valueOf(conv.getId()))
+            .event("conversationId").build());
 
     // ---- 업스트림: SSE 이벤트로 직접 디코드 ----
     Flux<ServerSentEvent<String>> raw =
@@ -253,61 +247,73 @@ public class ChatbotService {
             .header(HttpHeaders.ACCEPT_ENCODING, "identity")
             .bodyValue(payload)
             .retrieve()
-            .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
-            .timeout(Duration.ofMinutes(5));
+            .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {
+            })
+            .timeout(Duration.ofMinutes(5))
+            // 🔎 여기! 원시 SSE 이벤트를 그대로 로그
+            .doOnSubscribe(s -> System.out.println("[SSE-UP][subscribe] conv=" + conv.getId()))
+            .doOnNext(evt ->
+                System.out.println("[SSE-UP][raw] event=" + evt.event() + " data=" + evt.data()))
+            .doOnError(e ->
+                System.err.println(
+                    "[SSE-UP][raw][error] " + e.getClass().getName() + ": " + e.getMessage()))
+            .doOnComplete(() -> System.out.println("[SSE-UP][raw] complete"));
 
     // done에서 즉시 완료, data만 토큰으로 방출
     Flux<String> upstream =
-        raw.takeUntil(evt -> "done".equals(evt.event())) // done 이벤트까지 받고 스트림 종료
-            .filter(evt -> !"done".equals(evt.event())) // done 이벤트 자체는 버림
-            .map(ServerSentEvent::data) // data 추출
+        raw
+            .takeUntil(evt -> "done".equals(evt.event()))     // done 이벤트까지 받고 스트림 종료
+            .filter(evt -> !"done".equals(evt.event()))       // done 이벤트 자체는 버림
+            .map(ServerSentEvent::data)                       // data 추출
             .filter(data -> data != null && !data.isBlank())
-            .onErrorResume(
-                t ->
-                    (t instanceof reactor.netty.http.client.PrematureCloseException
-                            || t instanceof java.util.concurrent.TimeoutException
-                            || (t
-                                    instanceof
-                                    org.springframework.web.reactive.function.client
-                                        .WebClientResponseException
-                                    w
-                                && w.getCause()
-                                    instanceof reactor.netty.http.client.PrematureCloseException))
-                        ? Flux.empty()
-                        : Flux.error(t));
+            // 🔎 토큰 로그
+            .doOnNext(tok -> System.out.println("[SSE-UP][token] \"" + tok + "\""))
+            .onErrorResume(t -> {
+              System.err.println(
+                  "[SSE-UP][token][error] " + t.getClass().getName() + ": " + t.getMessage());
+              if (t instanceof reactor.netty.http.client.PrematureCloseException
+                  || t instanceof java.util.concurrent.TimeoutException
+                  || (
+                  t instanceof org.springframework.web.reactive.function.client.WebClientResponseException w
+                      && w.getCause() instanceof reactor.netty.http.client.PrematureCloseException)) {
+                return Flux.empty(); // 네트워크 조기종료/타임아웃은 무시
+              }
+              return Flux.error(t);
+            });
 
     StringBuilder acc = new StringBuilder();
 
     Flux<ServerSentEvent<String>> body =
         upstream
             .doOnNext(acc::append) // 토큰 누적
-            .doFinally(
-                sig -> {
-                  // ✅ 마지막에 답변 저장 + 가드 해제 (성공/에러/취소 모두)
-                  try {
-                    String full = acc.toString();
-                    if (!full.isBlank()) {
-                      messageRepo.save(
-                          Message.builder()
-                              .conversationId(conv.getId())
-                              .role(MessageRole.ASSISTANT)
-                              .content(full)
-                              .build());
-                    }
-                  } finally {
-                    inflightConversations.remove(conv.getId());
-                    if (isNewRequest) {
-                      inflightNewConvByUser.remove(req.userId());
-                    }
-                  }
-                })
+            .doFinally(sig -> {
+              try {
+                String full = acc.toString();
+                System.out.println("[SSE-DOWN][finally] signal=" + sig + " len=" + full.length());
+                if (!full.isBlank()) {
+                  messageRepo.save(
+                      Message.builder()
+                          .conversationId(conv.getId())
+                          .role(MessageRole.ASSISTANT)
+                          .content(full)
+                          .build());
+                }
+              } finally {
+                inflightConversations.remove(conv.getId());
+                if (isNewRequest) {
+                  inflightNewConvByUser.remove(req.userId());
+                }
+              }
+            })
             .map(tok -> ServerSentEvent.<String>builder(tok).build())
-            .onErrorResume(
-                e ->
-                    Flux.just(
-                        ServerSentEvent.<String>builder("오류가 발생했어요. 잠시 후 다시 시도해주세요.")
-                            .event("error")
-                            .build()));
+            .onErrorResume(e -> {
+              System.err.println(
+                  "[SSE-DOWN][error] " + e.getClass().getName() + ": " + e.getMessage());
+              return Flux.just(
+                  ServerSentEvent.<String>builder("오류가 발생했어요. 잠시 후 다시 시도해주세요.")
+                      .event("error")
+                      .build());
+            });
 
     return Flux.concat(first, body);
   }
