@@ -49,7 +49,7 @@ public class QuizService {
         .findByQuizDate(today)
         .orElseGet(
             () -> {
-              // pick one from pool
+              // 최근 N일 내에 사용하지 않은 후보를 랜덤 픽
               LocalDate threshold = today.minusDays(N_DAYS_NO_REPEAT);
               List<QuizPool> candidates =
                   quizPoolRepo.findPickableRandom(threshold, PageRequest.of(0, 10));
@@ -58,8 +58,7 @@ public class QuizService {
               }
 
               QuizPool picked = candidates.get(0);
-              picked.setLastUsedDate(today); // mark used
-              // persist via repo (dirty checking handles it)
+              picked.setLastUsedDate(today); // dirty checking 으로 반영됨 (@Transactional)
 
               DailyQuiz dq = new DailyQuiz();
               dq.setQuizDate(today);
@@ -81,20 +80,15 @@ public class QuizService {
 
     boolean correct = (quiz.getAnswer().booleanValue() == userAnswer);
 
-    // 포인트/지갑 처리 (idempotent)
     int awarded = 0;
     Long walletBalance = null;
 
     if (correct) {
-      // 정답인 경우에만 일일 퀴즈 적립을 시도 (중복 적립 방지)
       boolean firstTime = pointService.earnDailyQuizOnce(userId, (long) QUIZ_REWARD, quiz.getId());
       if (firstTime) {
         awarded = QUIZ_REWARD;
-        // 적립 직후 잔액 조회 (earnDailyQuizOnce가 잔액을 리턴하도록 확장 가능)
         walletBalance = pointService.getBalance(userId);
       }
-      // firstTime=false 면 이미 적립한 케이스 → awarded=0, walletBalance=null 유지
-      // 필요 시 DTO에 'alreadyRewarded' 같은 플래그 추가 가능
     }
 
     // 시도 기록
@@ -117,8 +111,8 @@ public class QuizService {
   public static class AnswerResult {
 
     private String result; // CORRECT | WRONG
-    private Integer awarded;
-    private Long walletBalance; // null if 0 or 미적립
+    private Integer awarded; // 적립 포인트
+    private Long walletBalance; // 적립 후 잔액 (null 가능)
     private Long ingredientId;
   }
 }
