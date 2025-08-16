@@ -1,5 +1,20 @@
 package com.likelion.picklbe.domain.chatbot.service;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatRequest;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatResponse;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ConversationDetailResponse;
@@ -15,20 +30,8 @@ import com.likelion.picklbe.domain.chatbot.repository.ConversationRepository;
 import com.likelion.picklbe.domain.chatbot.repository.MessageRepository;
 import com.likelion.picklbe.domain.chatbot.repository.UserMemoryRepository;
 import com.likelion.picklbe.global.exception.CustomException;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -77,13 +80,9 @@ public class ChatbotService {
   }
 
   // (선택) 새 대화 제목 생성 – 실패해도 무시
-  private record TitleReq(String message, String memory, int max_len) {
+  private record TitleReq(String message, String memory, int max_len) {}
 
-  }
-
-  private record TitleRes(String title) {
-
-  }
+  private record TitleRes(String title) {}
 
   private void tryUpdateSmartTitleAsync(String firstMessage, Long userId, Conversation conv) {
     var memory = buildMemoryBlock(userId);
@@ -201,7 +200,7 @@ public class ChatbotService {
       conv =
           isNewRequest
               ? conversationRepo.save(
-              Conversation.builder().userId(req.userId()).title("대화").build())
+                  Conversation.builder().userId(req.userId()).title("대화").build())
               : conversationRepo
                   .findByIdAndUserId(req.conversationId(), req.userId())
                   .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
@@ -257,34 +256,41 @@ public class ChatbotService {
             .retrieve()
             .onStatus(
                 HttpStatusCode::isError,
-                rsp -> rsp.bodyToMono(String.class).flatMap(body -> Mono.error(
-                    new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED))))
+                rsp ->
+                    rsp.bodyToMono(String.class)
+                        .flatMap(
+                            body ->
+                                Mono.error(
+                                    new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED))))
             .bodyToFlux(String.class) // <- String 청크
-            .flatMap(chunk -> {
-              // 청크를 '\n' 기준 라인으로 안전하게 분할
-              List<String> out = new ArrayList<>();
-              carry.append(chunk);
-              int idx;
-              while ((idx = indexOfNewline(carry)) >= 0) {
-                String line = carry.substring(0, idx);
-                if (!line.isEmpty() && line.charAt(line.length() - 1) == '\r') {
-                  line = line.substring(0, line.length() - 1);
-                }
-                out.add(line);
-                // '\n' 소비
-                carry.delete(0, idx + 1);
-              }
-              return Flux.fromIterable(out);
-            })
-            .concatWith(Flux.defer(() -> {
-              // 스트림 종료 시 남은 마지막 라인 방출
-              if (carry.length() > 0) {
-                String last = carry.toString();
-                carry.setLength(0);
-                return Flux.just(last);
-              }
-              return Flux.empty();
-            }))
+            .flatMap(
+                chunk -> {
+                  // 청크를 '\n' 기준 라인으로 안전하게 분할
+                  List<String> out = new ArrayList<>();
+                  carry.append(chunk);
+                  int idx;
+                  while ((idx = indexOfNewline(carry)) >= 0) {
+                    String line = carry.substring(0, idx);
+                    if (!line.isEmpty() && line.charAt(line.length() - 1) == '\r') {
+                      line = line.substring(0, line.length() - 1);
+                    }
+                    out.add(line);
+                    // '\n' 소비
+                    carry.delete(0, idx + 1);
+                  }
+                  return Flux.fromIterable(out);
+                })
+            .concatWith(
+                Flux.defer(
+                    () -> {
+                      // 스트림 종료 시 남은 마지막 라인 방출
+                      if (carry.length() > 0) {
+                        String last = carry.toString();
+                        carry.setLength(0);
+                        return Flux.just(last);
+                      }
+                      return Flux.empty();
+                    }))
             // data: 라인만 추출
             .filter(line -> line.startsWith("data:"))
             .map(line -> line.substring(5).trim())
@@ -293,10 +299,14 @@ public class ChatbotService {
             .onErrorResume(
                 t ->
                     (t instanceof reactor.netty.http.client.PrematureCloseException
-                        || t instanceof java.util.concurrent.TimeoutException
-                        || (
-                        t instanceof org.springframework.web.reactive.function.client.WebClientResponseException w
-                            && w.getCause() instanceof reactor.netty.http.client.PrematureCloseException))
+                            || t instanceof java.util.concurrent.TimeoutException
+                            || (t
+                                    instanceof
+                                    org.springframework.web.reactive.function.client
+                                        .WebClientResponseException
+                                    w
+                                && w.getCause()
+                                    instanceof reactor.netty.http.client.PrematureCloseException))
                         ? Flux.empty()
                         : Flux.error(t));
 
