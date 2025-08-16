@@ -78,6 +78,6 @@ jobs:
             docker compose down
             docker compose pull
             docker compose up -d --build
-
+            
             echo "🧼 사용하지 않는 이미지 정리"
             docker image prune -f
