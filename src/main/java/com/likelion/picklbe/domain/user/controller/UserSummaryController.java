@@ -36,14 +36,14 @@ public class UserSummaryController {
               - 포인트 합계 및 찜/히스토리 개수 포함
               """,
       responses = {
-          @ApiResponse(
-              responseCode = "200",
-              description = "성공",
-              content =
-              @Content(
-                  mediaType = "application/json",
-                  schema = @Schema(implementation = BaseResponse.class),
-                  examples = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "성공",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = BaseResponse.class),
+                    examples = {
                       @ExampleObject(
                           name = "성공 예시",
                           value =
@@ -63,13 +63,13 @@ public class UserSummaryController {
                                     }
                                   }
                                   """)
-                  }))
+                    }))
       })
   @GetMapping("/summary")
   public BaseResponse<UserSummaryResponse> summary(
       @Parameter(hidden = true) // Swagger 문서에서 principal 파라미터 숨김
-      @AuthenticationPrincipal
-      CustomUserDetails me) {
+          @AuthenticationPrincipal
+          CustomUserDetails me) {
     return BaseResponse.success("요약 조회에 성공했습니다.", summaryService.get(me.getId()));
   }
 }
