@@ -39,13 +39,14 @@ public class QuizController {
 
   @Operation(summary = "오늘의 퀴즈 조회", description = "로그인한 사용자의 오늘의 OX 퀴즈를 조회합니다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "퀴즈 조회 성공"),
-    @ApiResponse(responseCode = "401", description = "인증 실패"),
-    @ApiResponse(responseCode = "404", description = "오늘의 퀴즈가 존재하지 않음")
+    @ApiResponse(responseCode = "200", description = "퀴즈 조회(또는 생성) 성공"),
+    @ApiResponse(responseCode = "401", description = "인증 실패")
   })
   @GetMapping("/daily")
   public QuizDailyResponse getDaily(@Parameter(hidden = true) @AuthUser Long userId) {
-    DailyQuiz dq = quizService.getOrThrowTodayQuiz();
+    // 없으면 생성하고, 있으면 그대로 반환
+    DailyQuiz dq = quizService.createTodayQuizIfAbsent();
+
     boolean attempted = attemptRepo.existsByUserIdAndQuizDate(userId, dq.getQuizDate());
 
     return QuizDailyResponse.builder()
