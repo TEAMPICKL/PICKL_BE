@@ -111,15 +111,18 @@ public class DailyPriceChangePersistService {
 
   // ========= 조회 =========
   @Transactional(readOnly = true)
-  public List<ItemDailyPriceChangeResponse> getStoredItems(LocalDate date, String clsOpt) {
+  public List<ItemDailyPriceChangeResponse> getStoredItems(LocalDate dateOrNull, String clsOpt) {
+    LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
+    if (date == null) {
+      return List.of(); // 아직 데이터가 하나도 없는 경우
+    }
+
     List<KamisItemPrice> rows =
         (clsOpt == null || clsOpt.isBlank())
             ? itemRepo.findByPriceDate(date)
             : itemRepo.findByPriceDateAndProductClsName(date, clsOpt);
 
-    // id 오름차순으로 고정
     rows.sort(Comparator.comparing(KamisItemPrice::getId));
-
     return rows.stream().map(this::toItemResp).toList();
   }
 
@@ -178,7 +181,13 @@ public class DailyPriceChangePersistService {
   }
 
   @Transactional(readOnly = true)
-  public List<CategoryDailyPriceChangeResponse> getStoredCategories(LocalDate date, String clsOpt) {
+  public List<CategoryDailyPriceChangeResponse> getStoredCategories(
+      LocalDate dateOrNull, String clsOpt) {
+    LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
+    if (date == null) {
+      return List.of();
+    }
+
     List<KamisCategorySummary> rows =
         (clsOpt == null || clsOpt.isBlank())
             ? catRepo.findByPriceDate(date)

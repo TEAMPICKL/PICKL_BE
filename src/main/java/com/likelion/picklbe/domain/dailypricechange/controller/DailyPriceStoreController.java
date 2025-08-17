@@ -20,6 +20,8 @@ import com.likelion.picklbe.domain.dailypricechange.service.DailyPriceChangePers
 import com.likelion.picklbe.global.response.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -33,46 +35,110 @@ public class DailyPriceStoreController {
 
   @PostMapping("/ingest")
   @Operation(
-      summary = "KAMIS 최신 데이터 적재",
+      summary = "DEV - KAMIS 최신 데이터 적재",
       description = "KAMIS에서 불러온 원본/품목/카테고리 데이터를 DB에 저장합니다. date 미지정 시 KST 오늘 기준.")
   public BaseResponse<Map<String, Object>> ingest(
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+      @Parameter(description = "적재 대상 날짜(생략 시 오늘)", example = "2025-08-17")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate date) {
 
     var res = service.ingestLatest(date);
     return BaseResponse.success(
         "ingested",
         Map.of(
-            "rawId",
-            res.rawId(),
-            "itemCount",
-            res.itemCount(),
-            "categoryCount",
-            res.categoryCount()));
+            "rawId", res.rawId(),
+            "itemCount", res.itemCount(),
+            "categoryCount", res.categoryCount()));
   }
 
   @GetMapping("/items")
-  @Operation(summary = "저장된 품목 리스트 조회", description = "date=YYYY-MM-DD, cls=소매/도매(옵션)")
+  @Operation(
+      summary = "PICK - 저장된 품목 리스트 조회",
+      description = "date=YYYY-MM-DD(옵션), market=소매|도매(옵션). date 생략 시 최신 수집일 사용")
   public BaseResponse<List<ItemDailyPriceChangeResponse>> items(
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-      @RequestParam(required = false) String cls) {
-    return BaseResponse.success("ok", service.getStoredItems(date, cls));
+      @Parameter(description = "조회 날짜(생략 시 최신 수집일)", example = "2025-08-17")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
+      @Parameter(description = "시장 구분", example = "소매")
+          @RequestParam(name = "market", required = false)
+          String market) {
+
+    return BaseResponse.success("ok", service.getStoredItems(date, market));
   }
 
   @GetMapping("/category")
-  @Operation(summary = "저장된 카테고리 평균 조회", description = "date=YYYY-MM-DD, cls=소매/도매(옵션)")
+  @Operation(
+      summary = "메인화면/ 식세평균 - 저장된 카테고리 평균 조회",
+      description = "date=YYYY-MM-DD(옵션), market=소매|도매(옵션). date 생략 시 최신 수집일 사용")
   public BaseResponse<List<CategoryDailyPriceChangeResponse>> category(
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-      @RequestParam(required = false) String cls) {
-    return BaseResponse.success("ok", service.getStoredCategories(date, cls));
+      @Parameter(description = "조회 날짜(생략 시 최신 수집일)", example = "2025-08-17")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
+      @Parameter(
+              description = "시장 구분",
+              example = "도매",
+              examples = {
+                @ExampleObject(name = "Retail", value = "소매"),
+                @ExampleObject(name = "Wholesale", value = "도매")
+              })
+          @RequestParam(name = "market", required = false)
+          String market) {
+
+    return BaseResponse.success("ok", service.getStoredCategories(date, market));
+  }
+
+  @GetMapping("/items/search")
+  @Operation(
+      summary = "PICK - 저장된 품목 검색 (상품명 부분일치)",
+      description = "name=상품명 키워드(부분일치, 대소문자 무시). date, market(소매/도매)은 옵션. date 생략 시 최신 수집일 사용")
+  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByName(
+      @Parameter(description = "상품명 검색어(부분일치)", example = "배추") @RequestParam(name = "name")
+          String name,
+      @Parameter(description = "조회 날짜(생략 시 최신 수집일)", example = "2025-08-17")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
+      @Parameter(
+              description = "시장 구분",
+              example = "소매",
+              examples = {
+                @ExampleObject(name = "Retail", value = "소매"),
+                @ExampleObject(name = "Wholesale", value = "도매")
+              })
+          @RequestParam(name = "market", required = false)
+          String market) {
+
+    String keyword = name == null ? "" : name.trim();
+    if (keyword.isBlank()) {
+      return BaseResponse.success("ok", List.of());
+    }
+    return BaseResponse.success("ok", service.searchByName(date, market, keyword));
+  }
+
+  @GetMapping("/items/{id}")
+  @Operation(summary = "PICK - ID로 단일 품목 조회", description = "kamis_item_price의 PK(ID)로 단건 조회")
+  public BaseResponse<ItemDailyPriceChangeResponse> getItemById(
+      @Parameter(description = "품목 PK", example = "12345") @PathVariable Long id) {
+
+    return service
+        .getItemById(id)
+        .map(r -> BaseResponse.success("ok", r))
+        .orElseGet(() -> BaseResponse.success("not-found", null));
   }
 
   @GetMapping("/raw/latest")
   @Operation(
-      summary = "저장된 원본 JSON 최신건",
-      description = "date=YYYY-MM-DD 의 가장 최근 수집 건을 반환합니다(원본 payload 포함).")
+      summary = "DEV - 저장된 원본 JSON 최신건",
+      description = "date=YYYY-MM-DD 의 가장 최근 수집 건을 반환(원본 payload 포함)")
   public BaseResponse<Map<String, Object>> rawLatest(
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+      @Parameter(description = "조회 날짜", example = "2025-08-17")
+          @RequestParam
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date) {
+
     Optional<KamisRawPayload> opt = service.getLatestRaw(date);
     if (opt.isEmpty()) {
       return BaseResponse.success("no-data", Map.of());
@@ -86,52 +152,5 @@ public class DailyPriceStoreController {
             "fetchedAt", r.getFetchedAt(),
             "contentHash", r.getContentHash(),
             "payload", r.getPayload()));
-  }
-
-  //  // 이름으로 검색: /api/daily-price-change/store/items?date=2025-08-17&q=배추&cls=소매
-  //  @GetMapping(value = "/items", params = "q")
-  //  @Operation(
-  //      summary = "저장된 품목 검색(상품명)",
-  //      description = "date=YYYY-MM-DD, q=검색어(부분일치, 대소문자무시), cls=소매/도매(옵션)")
-  //  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByName(
-  //      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-  //      @RequestParam String q,
-  //      @RequestParam(required = false) String cls) {
-  //    String query = (q == null) ? "" : q.trim();
-  //    if (query.isBlank()) {
-  //      return BaseResponse.success("ok", List.of()); // 빈 검색어면 빈 리스트
-  //    }
-  //    return BaseResponse.success("ok", service.searchStoredItems(date, cls, query));
-  //  }
-  //
-  //  @GetMapping(value = "/items", params = "productNo")
-  //  @Operation(
-  //      summary = "저장된 품목 검색(productNo)",
-  //      description = "date=YYYY-MM-DD, productNo=정확일치, cls=소매/도매(옵션)")
-  //  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByProductNo(
-  //      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-  //      @RequestParam String productNo,
-  //      @RequestParam(required = false) String cls) {
-  //    return BaseResponse.success("ok", service.findByProductNo(date, cls, productNo.trim()));
-  //  }
-
-  @GetMapping("/items/search")
-  @Operation(
-      summary = "저장된 품목 검색(상품명 부분일치)",
-      description = "q=검색어(부분일치, 대소문자 무시). date, cls는 옵션. date가 없으면 최신 수집일 사용")
-  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByName(
-      @RequestParam String q,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-      @RequestParam(required = false) String cls) {
-    return BaseResponse.success("ok", service.searchByName(date, cls, q));
-  }
-
-  @GetMapping("/items/{id}")
-  @Operation(summary = "ID로 단일 품목 조회", description = "kamis_item_price의 PK(ID)로 단건을 조회합니다.")
-  public BaseResponse<ItemDailyPriceChangeResponse> getItemById(@PathVariable Long id) {
-    return service
-        .getItemById(id)
-        .map(r -> BaseResponse.success("ok", r))
-        .orElseGet(() -> BaseResponse.success("not-found", null));
   }
 }
