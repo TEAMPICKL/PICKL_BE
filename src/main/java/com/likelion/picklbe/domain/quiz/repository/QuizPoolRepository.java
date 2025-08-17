@@ -2,6 +2,8 @@ package com.likelion.picklbe.domain.quiz.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,4 +26,20 @@ public interface QuizPoolRepository extends JpaRepository<QuizPool, Long> {
   // 전체에서 랜덤 (폴백)
   @Query("select qp from QuizPool qp order by function('rand')")
   List<QuizPool> findRandom(Pageable pageable);
+
+  // 아이콘이 있는 랜덤 퀴즈 뽑기
+  @Query(
+      value =
+          """
+      SELECT qp.id AS quizId, i.name AS ingredientName, qp.statement AS statement, i.icon_url AS icon
+      FROM quiz_pool qp
+      JOIN ingredient i ON i.id = qp.ingredient_id
+      WHERE qp.is_active = true
+        AND i.icon_url IS NOT NULL
+        AND i.name NOT IN ('미역','대파','다시마','곶감')
+      ORDER BY RAND()
+      LIMIT 1
+      """,
+      nativeQuery = true)
+  Optional<Map<String, Object>> pickRandomWithIcon();
 }
