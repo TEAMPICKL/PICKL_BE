@@ -1,23 +1,26 @@
 package com.likelion.picklbe.domain.dailypricechange.controller;
 
-import com.likelion.picklbe.domain.dailypricechange.entity.KamisRawPayload;
-import com.likelion.picklbe.domain.dailypricechange.response.CategoryDailyPriceChangeResponse;
-import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChangeResponse;
-import com.likelion.picklbe.domain.dailypricechange.service.DailyPriceChangePersistService;
-import com.likelion.picklbe.global.response.BaseResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.likelion.picklbe.domain.dailypricechange.entity.KamisRawPayload;
+import com.likelion.picklbe.domain.dailypricechange.response.CategoryDailyPriceChangeResponse;
+import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChangeResponse;
+import com.likelion.picklbe.domain.dailypricechange.service.DailyPriceChangePersistService;
+import com.likelion.picklbe.global.response.BaseResponse;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/daily-price-change/store")
@@ -33,7 +36,7 @@ public class DailyPriceStoreController {
       description = "KAMIS에서 불러온 원본/품목/카테고리 데이터를 DB에 저장합니다. date 미지정 시 KST 오늘 기준.")
   public BaseResponse<Map<String, Object>> ingest(
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-      LocalDate date) {
+          LocalDate date) {
 
     var res = service.ingestLatest(date);
     return BaseResponse.success(
@@ -84,32 +87,32 @@ public class DailyPriceStoreController {
             "payload", r.getPayload()));
   }
 
-//  // 이름으로 검색: /api/daily-price-change/store/items?date=2025-08-17&q=배추&cls=소매
-//  @GetMapping(value = "/items", params = "q")
-//  @Operation(
-//      summary = "저장된 품목 검색(상품명)",
-//      description = "date=YYYY-MM-DD, q=검색어(부분일치, 대소문자무시), cls=소매/도매(옵션)")
-//  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByName(
-//      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-//      @RequestParam String q,
-//      @RequestParam(required = false) String cls) {
-//    String query = (q == null) ? "" : q.trim();
-//    if (query.isBlank()) {
-//      return BaseResponse.success("ok", List.of()); // 빈 검색어면 빈 리스트
-//    }
-//    return BaseResponse.success("ok", service.searchStoredItems(date, cls, query));
-//  }
-//
-//  @GetMapping(value = "/items", params = "productNo")
-//  @Operation(
-//      summary = "저장된 품목 검색(productNo)",
-//      description = "date=YYYY-MM-DD, productNo=정확일치, cls=소매/도매(옵션)")
-//  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByProductNo(
-//      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-//      @RequestParam String productNo,
-//      @RequestParam(required = false) String cls) {
-//    return BaseResponse.success("ok", service.findByProductNo(date, cls, productNo.trim()));
-//  } 
+  //  // 이름으로 검색: /api/daily-price-change/store/items?date=2025-08-17&q=배추&cls=소매
+  //  @GetMapping(value = "/items", params = "q")
+  //  @Operation(
+  //      summary = "저장된 품목 검색(상품명)",
+  //      description = "date=YYYY-MM-DD, q=검색어(부분일치, 대소문자무시), cls=소매/도매(옵션)")
+  //  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByName(
+  //      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+  //      @RequestParam String q,
+  //      @RequestParam(required = false) String cls) {
+  //    String query = (q == null) ? "" : q.trim();
+  //    if (query.isBlank()) {
+  //      return BaseResponse.success("ok", List.of()); // 빈 검색어면 빈 리스트
+  //    }
+  //    return BaseResponse.success("ok", service.searchStoredItems(date, cls, query));
+  //  }
+  //
+  //  @GetMapping(value = "/items", params = "productNo")
+  //  @Operation(
+  //      summary = "저장된 품목 검색(productNo)",
+  //      description = "date=YYYY-MM-DD, productNo=정확일치, cls=소매/도매(옵션)")
+  //  public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByProductNo(
+  //      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+  //      @RequestParam String productNo,
+  //      @RequestParam(required = false) String cls) {
+  //    return BaseResponse.success("ok", service.findByProductNo(date, cls, productNo.trim()));
+  //  }
 
   @GetMapping("/items/search")
   @Operation(
