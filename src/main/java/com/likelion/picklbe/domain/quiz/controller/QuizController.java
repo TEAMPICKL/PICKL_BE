@@ -58,7 +58,7 @@ public class QuizController {
             QuizDailyResponse.IngredientDto.builder()
                 .id(dq.getIngredient().getId())
                 .name(dq.getIngredient().getName())
-                .iconUrl(dq.getIngredient().getIconUrl())
+                .icon(dq.getIngredient().getIcon())
                 .build())
         .build();
   }
