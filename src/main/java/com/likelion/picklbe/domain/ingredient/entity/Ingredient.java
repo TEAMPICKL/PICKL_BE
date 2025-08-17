@@ -23,6 +23,7 @@ public class Ingredient {
   @Column(nullable = false, unique = true, length = 100)
   private String name;
 
+  @Column(name = "icon_url")
   private String icon;
 
   @Column(name = "thumbnail_url", length = 255)
