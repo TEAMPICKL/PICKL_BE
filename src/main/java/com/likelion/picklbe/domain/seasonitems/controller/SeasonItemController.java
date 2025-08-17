@@ -4,7 +4,9 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.likelion.picklbe.domain.seasonitems.dto.request.SeasonItemCreateRequest;
+import com.likelion.picklbe.domain.seasonitems.dto.request.SeasonItemUpdateRequest;
 import com.likelion.picklbe.domain.seasonitems.dto.response.SeasonItemDetailDto;
 import com.likelion.picklbe.domain.seasonitems.dto.response.SeasonItemSummaryDto;
 import com.likelion.picklbe.domain.seasonitems.service.SeasonItemService;
@@ -59,5 +62,20 @@ public class SeasonItemController {
   @Operation(summary = "Dev 제철 식재료 등록", description = "제철 식재료 정보 직접 넣어 등록")
   public BaseResponse<SeasonItemDetailDto> create(@RequestBody @Valid SeasonItemCreateRequest req) {
     return BaseResponse.success("제철 식재료 등록 성공", seasonItemService.create(req));
+  }
+
+  @PatchMapping("/{id}")
+  @Operation(summary = "Dev 제철 식재료 부분 수정(PATCH)", description = "넘겨준 필드만 부분 업데이트합니다. (단위/가격 포함)")
+  public BaseResponse<SeasonItemDetailDto> updatePartially(
+      @PathVariable Long id, @RequestBody @Valid SeasonItemUpdateRequest req) {
+    SeasonItemDetailDto updated = seasonItemService.update(id, req);
+    return BaseResponse.success("제철 식재료 수정 성공", updated);
+  }
+
+  @DeleteMapping("/{id}")
+  @Operation(summary = "Dev 제철 식재료 삭제", description = "해당 ID의 제철 식재료를 삭제합니다.")
+  public BaseResponse<Void> delete(@PathVariable Long id) {
+    seasonItemService.delete(id);
+    return BaseResponse.success("제철 식재료 삭제 성공", null);
   }
 }

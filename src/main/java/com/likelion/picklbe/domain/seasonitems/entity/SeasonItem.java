@@ -63,6 +63,12 @@ public class SeasonItem {
   @Column(name = "tip", nullable = false)
   private String tip; // 꿀팁
 
+  @Column(name = "unit", nullable = false, length = 50)
+  private String unit;
+
+  @Column(name = "price", nullable = false)
+  private Integer price;
+
   @Column(name = "imageUrl", nullable = false)
   private String imageUrl;
 
