@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -41,6 +42,7 @@ public class KamisPriceResponse {
     private String categoryName;
 
     @JsonProperty("productno")
+    @JsonAlias({"product_no", "productNo"}) // <- 추가하면 포맷 바뀌어도 매핑됨
     private String productNo;
 
     @JsonProperty("lastest_day")
