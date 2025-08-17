@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -123,5 +124,14 @@ public class DailyPriceStoreController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
       @RequestParam(required = false) String cls) {
     return BaseResponse.success("ok", service.searchByName(date, cls, q));
+  }
+
+  @GetMapping("/items/{id}")
+  @Operation(summary = "ID로 단일 품목 조회", description = "kamis_item_price의 PK(ID)로 단건을 조회합니다.")
+  public BaseResponse<ItemDailyPriceChangeResponse> getItemById(@PathVariable Long id) {
+    return service
+        .getItemById(id)
+        .map(r -> BaseResponse.success("ok", r))
+        .orElseGet(() -> BaseResponse.success("not-found", null));
   }
 }
