@@ -137,6 +137,11 @@ public class DailyPriceChangePersistService {
   }
 
   @Transactional(readOnly = true)
+  public Optional<ItemDailyPriceChangeResponse> getItemById(Long id) {
+    return itemRepo.findById(id).map(this::toItemResp);
+  }
+
+  @Transactional(readOnly = true)
   public List<ItemDailyPriceChangeResponse> searchByName(
       LocalDate dateOrNull, String clsOpt, String q) {
 
