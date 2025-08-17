@@ -19,6 +19,8 @@ public class SeasonItemMapper {
         .shortDescription(s.getShortDescription())
         .seasonMonth(s.getInSeasonMonth())
         .imageUrl(s.getImageUrl())
+        .unit(s.getUnit())
+        .price(s.getPrice())
         .build();
   }
 
@@ -34,6 +36,9 @@ public class SeasonItemMapper {
         .howToTrim(s.getHowToTrim())
         .tip(s.getTip())
         .imageUrl(s.getImageUrl())
+        .inSeasonMonth(s.getInSeasonMonth())
+        .unit(s.getUnit())
+        .price(s.getPrice())
         .build();
   }
 

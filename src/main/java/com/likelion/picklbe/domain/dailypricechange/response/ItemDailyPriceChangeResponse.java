@@ -10,6 +10,12 @@ import lombok.Data;
 @AllArgsConstructor
 public class ItemDailyPriceChangeResponse {
 
+  @Schema(description = "데이터 적재 번호", example = "1")
+  private Long id;
+
+  @Schema(description = "상품번호", example = "123")
+  private String productNo;
+
   @Schema(description = "상품명", example = "배추")
   private String productName;
 

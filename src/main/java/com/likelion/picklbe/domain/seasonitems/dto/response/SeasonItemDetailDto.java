@@ -41,4 +41,13 @@ public class SeasonItemDetailDto {
 
   @Schema(description = "식재료 이미지 URL", example = "https://example.com/images/corn.jpg")
   private String imageUrl;
+
+  @Schema(description = "제철 월", example = "8")
+  private Integer inSeasonMonth;
+
+  @Schema(description = "단위", example = "100g")
+  private String unit;
+
+  @Schema(description = "가격(원)", example = "9000")
+  private Integer price;
 }
