@@ -52,6 +52,25 @@ public class DailyPriceStoreController {
             "categoryCount", res.categoryCount()));
   }
 
+  @PostMapping("/images/ingest")
+  @Operation(
+      summary = "이미지 URL 적재(미채움 우선, 필요 시 1번부터 리프레시)",
+      description =
+          """
+          imageUrl이 NULL인 레코드를 id 오름차순으로 최대 batchSize개(기본 50)까지 Unsplash에서 검색해 채웁니다.
+          모두 채워진 경우 자동으로 1번부터 N개를 재검사하여, 변경사항이 있으면 업데이트합니다.
+          date, market(소매/도매)은 옵션이며, date 생략 시 최신 수집일을 사용합니다.
+          강제로 리프레시 모드로만 수행하려면 refresh=true를 주면 됩니다.
+          """)
+  public BaseResponse<Map<String, Object>> ingestImages(
+      @RequestParam(required = false) Integer batchSize,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+      @RequestParam(name = "market", required = false) String market,
+      @RequestParam(name = "refresh", required = false, defaultValue = "false") boolean refresh) {
+    Map<String, Object> res = service.ingestMissingImages(batchSize, date, market, refresh);
+    return BaseResponse.success("image-ingested", res);
+  }
+
   @GetMapping("/items")
   @Operation(
       summary = "PICK - 저장된 품목 리스트 조회",

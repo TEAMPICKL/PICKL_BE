@@ -79,4 +79,7 @@ public class KamisItemPrice {
 
   @Column(name = "priceDiffRate", nullable = false)
   private double priceDiffRate;
+
+  @Column(name = "imageUrl", length = 512)
+  private String imageUrl;
 }

@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +33,7 @@ import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChang
 import com.likelion.picklbe.global.api.kamis.client.KamisPriceClient;
 import com.likelion.picklbe.global.api.kamis.dto.KamisPriceResponse;
 import com.likelion.picklbe.global.api.kamis.dto.KamisPriceResponse.Item;
+import com.likelion.picklbe.global.api.unsplash.client.UnsplashClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 public class DailyPriceChangePersistService {
 
   private final KamisPriceClient kamisPriceClient;
+  private final UnsplashClient unsplashClient;
   private final DailyPriceChangeMapper mapper;
   private final KamisRawPayloadRepository rawRepo;
   private final KamisItemPriceRepository itemRepo;
@@ -180,6 +186,104 @@ public class DailyPriceChangePersistService {
     return rows.stream().map(this::toItemResp).toList();
   }
 
+  @Transactional
+  public Map<String, Object> ingestMissingImages(
+      Integer batchSize,
+      LocalDate dateOrNull,
+      String market, // "소매"/"도매"
+      boolean refresh) {
+    int size = (batchSize == null ? 50 : Math.min(50, Math.max(1, batchSize)));
+    Pageable page = PageRequest.of(0, size, Sort.by(Sort.Direction.ASC, "id"));
+
+    LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
+
+    List<KamisItemPrice> targets = null;
+    boolean refreshMode = refresh;
+
+    // 1) 기본: imageUrl == null 우선
+    if (!refresh) {
+      if (date == null) {
+        targets = itemRepo.findByImageUrlIsNullOrderByIdAsc(page);
+      } else if (market == null || market.isBlank()) {
+        targets = itemRepo.findByPriceDateAndImageUrlIsNullOrderByIdAsc(date, page);
+      } else {
+        targets =
+            itemRepo.findByPriceDateAndProductClsNameAndImageUrlIsNullOrderByIdAsc(
+                date, market, page);
+      }
+      if (targets.isEmpty()) {
+        refreshMode = true; // 전부 채워졌으면 리프레시
+      }
+    }
+
+    // 2) 리프레시 모드
+    if (refreshMode) {
+      if (date == null) {
+        targets = itemRepo.findAllByOrderByIdAsc(page);
+      } else if (market == null || market.isBlank()) {
+        targets = itemRepo.findByPriceDateOrderByIdAsc(date, page);
+      } else {
+        targets = itemRepo.findByPriceDateAndProductClsNameOrderByIdAsc(date, market, page);
+      }
+    }
+
+    // 2-1) 대상이 없으면 여기서 안전하게 종료 (null 허용 위해 LinkedHashMap 사용)
+    if (targets == null || targets.isEmpty()) {
+      Map<String, Object> out = new java.util.LinkedHashMap<>();
+      out.put("processed", 0);
+      out.put("updated", 0);
+      out.put("skipped", 0);
+      out.put("unchanged", 0);
+      out.put("date", date); // null OK
+      out.put("market", market); // null OK
+      out.put("refresh", refreshMode);
+      return out;
+    }
+
+    // 3) 실제 처리 카운터와 캐시 선언 (여기서부터!)
+    Map<String, String> queryCache = new HashMap<>();
+    int updated = 0, skipped = 0, unchanged = 0;
+
+    for (KamisItemPrice e : targets) {
+      String key = e.getProductName();
+      String url = queryCache.get(key);
+      if (url == null) {
+        url =
+            refreshMode
+                ? unsplashClient.searchFirstImageUrl(key) // 최신 확인(캐시 우회)
+                : unsplashClient.searchProduceImageUrl(key); // 캐시 사용
+        queryCache.put(key, url);
+      }
+
+      if (url == null || url.isBlank()) {
+        skipped++;
+        continue;
+      }
+
+      if (e.getImageUrl() == null || !e.getImageUrl().equals(url)) {
+        e.setImageUrl(url);
+        updated++;
+      } else {
+        unchanged++;
+      }
+    }
+
+    itemRepo.saveAll(targets);
+
+    // 4) 최종 반환 (null 허용 위해 LinkedHashMap 사용)
+    Map<String, Object> out = new java.util.LinkedHashMap<>();
+    out.put("processed", targets.size());
+    out.put("updated", updated);
+    out.put("skipped", skipped);
+    out.put("unchanged", unchanged);
+    out.put("date", date); // null OK
+    out.put("market", market); // null OK
+    out.put("refresh", refreshMode);
+    out.put("firstId", targets.get(0).getId());
+    out.put("lastId", targets.get(targets.size() - 1).getId());
+    return out;
+  }
+
   @Transactional(readOnly = true)
   public List<CategoryDailyPriceChangeResponse> getStoredCategories(
       LocalDate dateOrNull, String clsOpt) {
@@ -223,6 +327,7 @@ public class DailyPriceChangePersistService {
         .oneDayAgoPrice(round(r.getOneDayAgoPrice()))
         .priceDiff(round(r.getPriceDiff()))
         .priceDiffRate(round(r.getPriceDiffRate()))
+        .imageUrl(r.getImageUrl())
         .build();
   }
 
