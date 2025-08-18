@@ -14,7 +14,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.likelion.picklbe.global.exception.model.BaseErrorCode;
 
@@ -49,7 +51,6 @@ public class GlobalExceptionHandler {
             ? ((CustomException) ex).getErrorCode()
             : ((ApiException) ex).getErrorCode();
 
-    // errorCode가 혹시 null이어도 안전하게 처리
     HttpStatus status =
         (errorCode != null && errorCode.getStatus() != null)
             ? errorCode.getStatus()
@@ -71,8 +72,7 @@ public class GlobalExceptionHandler {
         (req != null ? req.getMethod() : "-"),
         ex);
 
-    // 필요시 CustomException에 data 필드가 있으면 여기서 꺼내 data로 넣어도 됨
-    return buildResponse(status, code, msg, /*data*/ null, req);
+    return buildResponse(status, code, msg, null, req);
   }
 
   /* ---------- Validation 실패 ---------- */
@@ -110,7 +110,6 @@ public class GlobalExceptionHandler {
   @ExceptionHandler({WebClientResponseException.class})
   public ResponseEntity<?> handleWebClientResponse(
       WebClientResponseException ex, HttpServletRequest req) {
-    // 상태/바디 전문 로그로 남겨 원인 즉시 파악
     log.error(
         "[Downstream/WebClient] status={}, path={}, method={}, body={}",
         ex.getStatusCode().value(),
@@ -119,12 +118,11 @@ public class GlobalExceptionHandler {
         ex.getResponseBodyAsString(),
         ex);
 
-    // 프런트로도 최소한의 정보는 전달(보안상 상세 바디 노출은 지양. 필요시 마스킹)
     return buildResponse(
         HttpStatus.BAD_GATEWAY,
         "DOWNSTREAM_ERROR",
         "외부 서비스 호출 중 오류가 발생했습니다.",
-        /* data */ Map.of(
+        Map.of(
             "status", ex.getStatusCode().value(),
             "reason", ex.getStatusText()),
         req);
@@ -145,10 +143,26 @@ public class GlobalExceptionHandler {
         HttpStatus.BAD_GATEWAY,
         "DOWNSTREAM_ERROR",
         "외부 서비스 호출 중 오류가 발생했습니다.",
-        /* data */ Map.of(
+        Map.of(
             "status", ex.getRawStatusCode(),
             "reason", ex.getStatusText()),
         req);
+  }
+
+  /* ---------- ResponseStatusException 처리 ---------- */
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<Map<String, Object>> handleRSE(ResponseStatusException ex, WebRequest req) {
+    Map<String, Object> body =
+        Map.of(
+            "message",
+            ex.getReason() != null ? ex.getReason() : ex.getStatusCode().toString(),
+            "code",
+            ex.getStatusCode().toString(),
+            "timestamp",
+            OffsetDateTime.now().toString(),
+            "success",
+            false);
+    return ResponseEntity.status(ex.getStatusCode()).body(body);
   }
 
   /* ---------- 그 외 예상치 못한 예외 ---------- */
@@ -161,7 +175,6 @@ public class GlobalExceptionHandler {
         (req != null ? req.getMethod() : "-"),
         ex);
 
-    // 원인 메시지 노출은 운영에서는 최소화 권장
     String msg = "예상하지 못한 서버 오류가 발생했습니다.";
     return buildResponse(
         HttpStatus.INTERNAL_SERVER_ERROR,

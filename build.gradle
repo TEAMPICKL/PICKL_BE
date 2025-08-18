@@ -44,6 +44,11 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
 
+    // 레이트리미트/재시도
+    implementation "io.github.resilience4j:resilience4j-reactor:2.2.0"
+    implementation "io.github.resilience4j:resilience4j-ratelimiter:2.2.0"
+    implementation "io.github.resilience4j:resilience4j-bulkhead:2.2.0"
+
     // ==== Lombok ====
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

@@ -5,15 +5,16 @@ import java.util.List;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.likelion.picklbe.domain.marketplace.dto.response.MarketMarkerResponse;
 import com.likelion.picklbe.domain.mart.service.MartQueryService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -51,23 +52,54 @@ public class MartController {
       responseCode = "403",
       description = "Kakao Local 서비스 미활성화 또는 권한 문제",
       content = @Content)
-  @ApiResponse(responseCode = "500", description = "서버 오류", content = @Content)
-  @Parameters({
-    @Parameter(name = "minX", description = "경도(lng) - 서쪽 경계", example = "126.764"),
-    @Parameter(name = "minY", description = "위도(lat) - 남쪽 경계", example = "37.413"),
-    @Parameter(name = "maxX", description = "경도(lng) - 동쪽 경계", example = "127.183"),
-    @Parameter(name = "maxY", description = "위도(lat) - 북쪽 경계", example = "37.715"),
-    @Parameter(name = "page", description = "페이지 (기본 1, 1~45 권장)", example = "1"),
-    @Parameter(name = "size", description = "페이지 크기 (기본 15, 1~15 권장)", example = "15")
-  })
+  @ApiResponse(
+      responseCode = "429",
+      description = "Kakao Local 레이트리밋(Too Many Requests)",
+      content = @Content)
+  @ApiResponse(
+      responseCode = "504",
+      description = "Kakao Local 타임아웃(Gateway Timeout)",
+      content = @Content)
+  @ApiResponse(
+      responseCode = "502",
+      description = "Kakao Local 업스트림 오류(Bad Gateway)",
+      content = @Content)
   @GetMapping("/api/marts")
   public List<MarketMarkerResponse> getMarts(
-      @RequestParam double minX, // lng west
-      @RequestParam double minY, // lat south
-      @RequestParam double maxX, // lng east
-      @RequestParam double maxY, // lat north
-      @RequestParam(required = false, defaultValue = "1") @Min(1) @Max(45) Integer page,
-      @RequestParam(required = false, defaultValue = "15") @Min(1) @Max(15) Integer size) {
+      @Parameter(
+              description = "경도(lng) - 서쪽 경계",
+              schema = @Schema(example = "126.764", defaultValue = "126.764"))
+          @RequestParam
+          double minX,
+      @Parameter(
+              description = "위도(lat) - 남쪽 경계",
+              schema = @Schema(example = "37.413", defaultValue = "37.413"))
+          @RequestParam
+          double minY,
+      @Parameter(
+              description = "경도(lng) - 동쪽 경계",
+              schema = @Schema(example = "127.183", defaultValue = "127.183"))
+          @RequestParam
+          double maxX,
+      @Parameter(
+              description = "위도(lat) - 북쪽 경계",
+              schema = @Schema(example = "37.715", defaultValue = "37.715"))
+          @RequestParam
+          double maxY,
+      @Parameter(
+              description = "페이지 (1~45 권장)",
+              schema = @Schema(example = "1", defaultValue = "1", minimum = "1", maximum = "45"))
+          @RequestParam(required = false, defaultValue = "1")
+          @Min(1)
+          @Max(45)
+          Integer page,
+      @Parameter(
+              description = "페이지 크기 (1~15 권장)",
+              schema = @Schema(example = "15", defaultValue = "15", minimum = "1", maximum = "15"))
+          @RequestParam(required = false, defaultValue = "15")
+          @Min(1)
+          @Max(15)
+          Integer size) {
 
     log.info(
         "[API] /api/marts minX={}, minY={}, maxX={}, maxY={}, page={}, size={}",
@@ -77,6 +109,11 @@ public class MartController {
         maxY,
         page,
         size);
+
+    double area = Math.abs(maxX - minX) * Math.abs(maxY - minY);
+    if (area > 0.30) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "검색 범위가 너무 넓어요. 지도를 더 확대해 주세요.");
+    }
 
     return service.getMarts(minX, minY, maxX, maxY, page, size);
   }
