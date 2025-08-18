@@ -9,7 +9,9 @@ import com.likelion.picklbe.global.api.mart.client.KakaoLocalClient;
 import com.likelion.picklbe.global.api.mart.dto.KakaoCategoryResponse;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MartQueryService {
@@ -20,11 +22,29 @@ public class MartQueryService {
       double minX, double minY, double maxX, double maxY, Integer page, Integer size) {
 
     int p = (page == null || page < 1) ? 1 : page;
-    int s = (size == null || size < 1 || size > 15) ? 15 : size; // 카카오 기본/권장
+    int s = (size == null || size < 1 || size > 15) ? 15 : size;
 
     KakaoCategoryResponse resp = kakao.searchMartsByRect(minX, minY, maxX, maxY, p, s);
+
     if (resp == null || resp.getDocuments() == null) {
+      log.warn(
+          "[MART] Upstream returned null/empty documents (rect={},{}~{},{} p={} s={})",
+          minX,
+          minY,
+          maxX,
+          maxY,
+          p,
+          s);
       return List.of();
+    }
+
+    var meta = resp.getMeta();
+    if (meta != null) {
+      log.info(
+          "[MART] meta: isEnd={} totalCount={} pageableCount={}",
+          meta.isEnd(),
+          meta.getTotalCount(),
+          meta.getPageableCount());
     }
 
     return resp.getDocuments().stream()
@@ -33,11 +53,11 @@ public class MartQueryService {
                 MarketMarkerResponse.builder()
                     .id(d.getId())
                     .name(d.getPlaceName())
-                    .category("대형마트") // 혹은 d.getCategoryName() 일부 파싱
+                    .category("대형마트")
                     .address(first(d.getRoadAddressName(), d.getAddressName()))
                     .lng(parse(d.getX()))
                     .lat(parse(d.getY()))
-                    .parking(null) // 카카오 문서엔 없음
+                    .parking(null)
                     .build())
         .toList();
   }
