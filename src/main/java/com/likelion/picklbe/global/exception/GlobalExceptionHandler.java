@@ -165,11 +165,80 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(ex.getStatusCode()).body(body);
   }
 
-  /* ---------- 그 외 예상치 못한 예외 ---------- */
+  /* ---------- 그 외 예상치 못한 예외 (래핑 원인 추적 포함) ---------- */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<?> handleException(Exception ex, HttpServletRequest req) {
+    // 원인 추적(과도한 체인 방지)
+    Throwable root = ex;
+    int depth = 0;
+    while (root.getCause() != null && depth++ < 10) {
+      root = root.getCause();
+    }
+
+    // 1) ResponseStatusException 이면 그대로 전달
+    if (root instanceof ResponseStatusException rse) {
+      log.warn(
+          "RSE(unwrap) 발생: status={}, reason={}, path={}, method={}",
+          rse.getStatusCode(),
+          rse.getReason(),
+          (req != null ? req.getRequestURI() : "-"),
+          (req != null ? req.getMethod() : "-"),
+          ex);
+
+      String msg = (rse.getReason() != null ? rse.getReason() : rse.getStatusCode().toString());
+      return buildResponse(
+          HttpStatus.valueOf(rse.getStatusCode().value()),
+          rse.getStatusCode().toString(),
+          msg,
+          null,
+          req);
+    }
+
+    // 2) 래핑된 WebClient/RestTemplate 예외면 상태코드 복원
+    if (root
+        instanceof
+        org.springframework.web.reactive.function.client.WebClientResponseException
+        wcre) {
+      log.error(
+          "[Downstream/WebClient - wrapped] status={}, body={}, path={}, method={}",
+          wcre.getStatusCode().value(),
+          wcre.getResponseBodyAsString(),
+          (req != null ? req.getRequestURI() : "-"),
+          (req != null ? req.getMethod() : "-"),
+          ex);
+
+      HttpStatus sc = HttpStatus.valueOf(wcre.getStatusCode().value());
+      // Retry-After 헤더를 data로 내려주면 프론트에서 429 쿨다운 파싱에 활용 가능
+      String retryAfter = wcre.getHeaders().getFirst("Retry-After");
+      Map<String, Object> data =
+          (retryAfter != null)
+              ? Map.of(
+                  "status", sc.value(), "reason", wcre.getStatusText(), "retryAfter", retryAfter)
+              : Map.of("status", sc.value(), "reason", wcre.getStatusText());
+
+      return buildResponse(sc, "DOWNSTREAM_ERROR", wcre.getMessage(), data, req);
+    }
+    if (root instanceof org.springframework.web.client.RestClientResponseException rcre) {
+      log.error(
+          "[Downstream/RestTemplate - wrapped] status={}, body={}, path={}, method={}",
+          rcre.getRawStatusCode(),
+          rcre.getResponseBodyAsString(),
+          (req != null ? req.getRequestURI() : "-"),
+          (req != null ? req.getMethod() : "-"),
+          ex);
+
+      HttpStatus sc = HttpStatus.resolve(rcre.getRawStatusCode());
+      if (sc == null) {
+        sc = HttpStatus.BAD_GATEWAY;
+      }
+      Map<String, Object> data =
+          Map.of("status", rcre.getRawStatusCode(), "reason", rcre.getStatusText());
+      return buildResponse(sc, "DOWNSTREAM_ERROR", rcre.getMessage(), data, req);
+    }
+
+    // 3) 기타는 서버 내부 오류(원하면 502로 통일 가능)
     log.error(
-        "Server 오류 발생: {}, path={}, method={}",
+        "Server 오류 발생(unwrap 포함): {}, path={}, method={}",
         ex.getMessage(),
         (req != null ? req.getRequestURI() : "-"),
         (req != null ? req.getMethod() : "-"),
