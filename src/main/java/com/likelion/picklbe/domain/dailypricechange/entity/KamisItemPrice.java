@@ -1,7 +1,5 @@
 package com.likelion.picklbe.domain.dailypricechange.entity;
 
-import java.time.LocalDate;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -13,7 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,13 +27,13 @@ import lombok.Setter;
 @Table(
     name = "kamis_item_price",
     indexes = {
-      @Index(name = "idx_item_date", columnList = "priceDate"),
-      @Index(name = "idx_item_cat", columnList = "priceDate,categoryCode")
+        @Index(name = "idx_item_date", columnList = "priceDate"),
+        @Index(name = "idx_item_cat", columnList = "priceDate,categoryCode")
     },
     uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uq_item_unique",
-          columnNames = {"priceDate", "productClsName", "categoryCode", "productNo"})
+        @UniqueConstraint(
+            name = "uq_item_unique",
+            columnNames = {"priceDate", "productClsName", "categoryCode", "productNo"})
     })
 public class KamisItemPrice {
 
@@ -82,4 +80,10 @@ public class KamisItemPrice {
 
   @Column(name = "imageUrl", length = 512)
   private String imageUrl;
+
+  private String productClsCode;
+  private String itemCode;
+  private String kindCode;
+  private String gradeRank;
+  private String countyCode;
 }

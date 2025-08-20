@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,7 +82,7 @@ public class DailyPriceChangePersistService {
 
     List<Item> items = Optional.ofNullable(resp.getPrice()).orElse(List.of());
 
-    // 품목 저장(덮어쓰기 전략: 같은 날짜는 싹 지우고 다시 적재)
+    // 같은 날짜 전체 삭제 후 재적재
     itemRepo.deleteByPriceDate(priceDate);
 
     List<KamisItemPrice> itemEntities =
@@ -91,7 +92,6 @@ public class DailyPriceChangePersistService {
             .collect(
                 Collectors.toMap(
                     e -> {
-                      // 키 생성: productNo 있으면 그걸 사용, 없으면 이름+단위로 대체
                       String base = e.getProductClsName() + "|" + e.getCategoryCode() + "|";
                       if (e.getProductNo() != null && !e.getProductNo().isBlank()) {
                         return base + "PNO:" + e.getProductNo();
@@ -99,7 +99,6 @@ public class DailyPriceChangePersistService {
                       return base + "NAME:" + e.getProductName() + "|" + e.getUnit();
                     },
                     e -> e,
-                    // 충돌 시 규칙: 최신가 큰 쪽 채택(원하면 바꿔도 됨)
                     (a, b) -> a.getLatestPrice() >= b.getLatestPrice() ? a : b))
             .values()
             .stream()
@@ -107,7 +106,7 @@ public class DailyPriceChangePersistService {
 
     itemRepo.saveAll(itemEntities);
 
-    // 카테고리 요약 저장(덮어쓰기)
+    // 카테고리 요약(덮어쓰기)
     catRepo.deleteByPriceDate(priceDate);
     List<KamisCategorySummary> catEntities = aggregateCategories(raw, priceDate, items);
     catRepo.saveAll(catEntities);
@@ -120,7 +119,7 @@ public class DailyPriceChangePersistService {
   public List<ItemDailyPriceChangeResponse> getStoredItems(LocalDate dateOrNull, String clsOpt) {
     LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
     if (date == null) {
-      return List.of(); // 아직 데이터가 하나도 없는 경우
+      return List.of();
     }
 
     List<KamisItemPrice> rows =
@@ -153,7 +152,6 @@ public class DailyPriceChangePersistService {
   @Transactional(readOnly = true)
   public List<ItemDailyPriceChangeResponse> searchByName(
       LocalDate dateOrNull, String clsOpt, String q) {
-
     String query = (q == null) ? "" : q.trim();
     if (query.isBlank()) {
       return List.of();
@@ -161,7 +159,7 @@ public class DailyPriceChangePersistService {
 
     LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
     if (date == null) {
-      return List.of(); // 데이터가 아직 없음
+      return List.of();
     }
 
     List<KamisItemPrice> rows =
@@ -186,12 +184,10 @@ public class DailyPriceChangePersistService {
     return rows.stream().map(this::toItemResp).toList();
   }
 
+  // ========= 이미지 보충 =========
   @Transactional
   public Map<String, Object> ingestMissingImages(
-      Integer batchSize,
-      LocalDate dateOrNull,
-      String market, // "소매"/"도매"
-      boolean refresh) {
+      Integer batchSize, LocalDate dateOrNull, String market, boolean refresh) {
     int size = (batchSize == null ? 50 : Math.min(50, Math.max(1, batchSize)));
     Pageable page = PageRequest.of(0, size, Sort.by(Sort.Direction.ASC, "id"));
 
@@ -200,7 +196,6 @@ public class DailyPriceChangePersistService {
     List<KamisItemPrice> targets = null;
     boolean refreshMode = refresh;
 
-    // 1) 기본: imageUrl == null 우선
     if (!refresh) {
       if (date == null) {
         targets = itemRepo.findByImageUrlIsNullOrderByIdAsc(page);
@@ -212,11 +207,10 @@ public class DailyPriceChangePersistService {
                 date, market, page);
       }
       if (targets.isEmpty()) {
-        refreshMode = true; // 전부 채워졌으면 리프레시
+        refreshMode = true;
       }
     }
 
-    // 2) 리프레시 모드
     if (refreshMode) {
       if (date == null) {
         targets = itemRepo.findAllByOrderByIdAsc(page);
@@ -227,20 +221,18 @@ public class DailyPriceChangePersistService {
       }
     }
 
-    // 2-1) 대상이 없으면 여기서 안전하게 종료 (null 허용 위해 LinkedHashMap 사용)
     if (targets == null || targets.isEmpty()) {
-      Map<String, Object> out = new java.util.LinkedHashMap<>();
+      Map<String, Object> out = new LinkedHashMap<>();
       out.put("processed", 0);
       out.put("updated", 0);
       out.put("skipped", 0);
       out.put("unchanged", 0);
-      out.put("date", date); // null OK
-      out.put("market", market); // null OK
+      out.put("date", date);
+      out.put("market", market);
       out.put("refresh", refreshMode);
       return out;
     }
 
-    // 3) 실제 처리 카운터와 캐시 선언 (여기서부터!)
     Map<String, String> queryCache = new HashMap<>();
     int updated = 0, skipped = 0, unchanged = 0;
 
@@ -250,16 +242,14 @@ public class DailyPriceChangePersistService {
       if (url == null) {
         url =
             refreshMode
-                ? unsplashClient.searchFirstImageUrl(key) // 최신 확인(캐시 우회)
-                : unsplashClient.searchProduceImageUrl(key); // 캐시 사용
+                ? unsplashClient.searchFirstImageUrl(key)
+                : unsplashClient.searchProduceImageUrl(key);
         queryCache.put(key, url);
       }
-
       if (url == null || url.isBlank()) {
         skipped++;
         continue;
       }
-
       if (e.getImageUrl() == null || !e.getImageUrl().equals(url)) {
         e.setImageUrl(url);
         updated++;
@@ -270,14 +260,13 @@ public class DailyPriceChangePersistService {
 
     itemRepo.saveAll(targets);
 
-    // 4) 최종 반환 (null 허용 위해 LinkedHashMap 사용)
-    Map<String, Object> out = new java.util.LinkedHashMap<>();
+    Map<String, Object> out = new LinkedHashMap<>();
     out.put("processed", targets.size());
     out.put("updated", updated);
     out.put("skipped", skipped);
     out.put("unchanged", unchanged);
-    out.put("date", date); // null OK
-    out.put("market", market); // null OK
+    out.put("date", date);
+    out.put("market", market);
     out.put("refresh", refreshMode);
     out.put("firstId", targets.get(0).getId());
     out.put("lastId", targets.get(targets.size() - 1).getId());
@@ -332,6 +321,7 @@ public class DailyPriceChangePersistService {
   }
 
   // ========= 내부 유틸 =========
+  // ========= 내부 유틸 =========
   private KamisItemPrice toItemEntity(KamisRawPayload raw, LocalDate date, Item it) {
     double latest = mapper.parseLatestPrice(it);
     double prev = mapper.parseOneDayAgoPrice(it);
@@ -343,23 +333,46 @@ public class DailyPriceChangePersistService {
     double diff = latest - prev;
     double rate = (prev == 0) ? 0 : (diff / prev) * 100.0;
 
-    String name =
-        firstNonBlank(it.getProductName(), it.getItemName()); // productName 없으면 item_name 사용
-    String pno = nz(it.getProductNo()); // 새 필드 사용
+    String name = firstNonBlank(it.getProductName(), it.getItemName());
+    String pno = nz(it.getProductNo());
+
+    // 이름 → 코드 보정 (일별에는 코드가 없을 수 있음)
+    String clsName = nz(it.getProductClsName()); // "소매"/"도매"
+    String clsCode = nz(it.getProductClsCode()); // "01"/"02" 있으면 사용
+    if (clsCode.isBlank()) {
+      if ("소매".equals(clsName)) {
+        clsCode = "01";
+      } else if ("도매".equals(clsName)) {
+        clsCode = "02";
+      } else {
+        clsCode = null; // 모호하면 null
+      }
+    }
+
+    // ⬇ 일별 응답에는 없음 → null 로 저장
+    String itemCode = null;
+    String kindCode = null;
+    String gradeRank = null;
+    String countyCode = null;
 
     return KamisItemPrice.builder()
         .raw(raw)
         .priceDate(date)
-        .productClsName(nz(it.getProductClsName()))
+        .productClsName(clsName)
+        .productClsCode(blankToNull(clsCode)) // 있으면 저장
         .categoryCode(nz(it.getCategoryCode()))
         .categoryName(nz(it.getCategoryName()))
         .productName(nz(name))
-        .productNo(pno.isBlank() ? null : pno) // 빈 값이면 null (UNIQUE에서 중복 허용)
+        .productNo(pno.isBlank() ? null : pno)
         .unit(unit)
         .latestPrice(latest)
         .oneDayAgoPrice(prev)
         .priceDiff(diff)
         .priceDiffRate(rate)
+        .itemCode(itemCode) // ← null
+        .kindCode(kindCode) // ← null
+        .gradeRank(gradeRank) // ← null
+        .countyCode(countyCode) // ← null
         .build();
   }
 
@@ -438,6 +451,10 @@ public class DailyPriceChangePersistService {
 
   private static String nz(String s) {
     return (s == null) ? "" : s.trim();
+  }
+
+  private static String blankToNull(String s) {
+    return (s == null || s.isBlank()) ? null : s;
   }
 
   private static double round(double v) {
