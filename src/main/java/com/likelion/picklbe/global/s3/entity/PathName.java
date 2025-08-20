@@ -8,5 +8,6 @@ public enum PathName {
   M05,
   M06,
   M07,
-  M08
+  M08,
+  MARKET
 }
