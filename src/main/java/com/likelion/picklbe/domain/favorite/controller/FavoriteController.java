@@ -1,8 +1,8 @@
 package com.likelion.picklbe.domain.favorite.controller;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +21,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "favorite-controller", description = "찜 등록/해제/조회 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/favorites")
@@ -31,38 +33,50 @@ public class FavoriteController {
   private final FavoriteService favoriteService;
   private final FavoriteRepository favoriteRepository;
 
+  // ---------- 단건 상태 조회 ----------
   @Operation(
       summary = "찜 상태 조회",
-      description = "특정 대상(FavoriteType, targetId)에 대해 현재 사용자가 찜했는지 여부를 반환합니다.",
-      responses = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class)))
-      })
+      description =
+          """
+          특정 대상이 현재 사용자에게 '찜'되어 있는지 확인합니다.
+          - 쿼리: type(INGREDIENT|RECIPE), targetId
+          - 응답: isLiked, likedAt
+          """,
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "조회 성공",
+              content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class))))
   @GetMapping("/status")
   public BaseResponse<FavoriteStatusResponse> status(
       @AuthenticationPrincipal CustomUserDetails me,
-      @Parameter(description = "찜 대상 타입 (예: INGREDIENT, RECIPE)", required = true) @RequestParam
+      @Parameter(description = "찜 대상 타입 (INGREDIENT | RECIPE)", required = true) @RequestParam
           FavoriteType type,
       @Parameter(description = "찜 대상 ID", required = true) @RequestParam Long targetId) {
     return BaseResponse.success("상태 조회 성공", favoriteService.status(me.getId(), type, targetId));
   }
 
+  // ---------- 등록/해제/토글 : 바디형 ----------
   @Operation(
-      summary = "찜 등록",
-      description = "특정 대상에 대해 찜을 등록합니다.",
-      responses = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "등록 성공",
-            content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class)))
-      })
+      summary = "찜 등록 (JSON 바디)",
+      description =
+          """
+          대상 타입과 ID를 JSON 바디로 보내 '찜 등록'합니다.
+          예시 바디:
+          {
+            "type": "INGREDIENT",
+            "targetId": 339
+          }
+          """,
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "등록 성공",
+              content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class))))
   @PostMapping
   public BaseResponse<FavoriteStatusResponse> like(
       @AuthenticationPrincipal CustomUserDetails me,
       @io.swagger.v3.oas.annotations.parameters.RequestBody(
-              description = "찜 등록 요청 바디 (대상 타입, 대상 ID)",
               required = true,
               content = @Content(schema = @Schema(implementation = FavoriteToggleRequest.class)))
           @RequestBody
@@ -72,66 +86,89 @@ public class FavoriteController {
   }
 
   @Operation(
-      summary = "찜 해제",
-      description = "특정 대상에 대해 찜을 해제합니다.",
-      responses = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "해제 성공",
-            content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class)))
-      })
+      summary = "찜 해제 (쿼리스트링)",
+      description = "type, targetId를 쿼리로 보내 '찜 해제'합니다.",
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "해제 성공",
+              content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class))))
   @DeleteMapping
   public BaseResponse<FavoriteStatusResponse> unlike(
       @AuthenticationPrincipal CustomUserDetails me,
-      @Parameter(description = "찜 대상 타입 (예: INGREDIENT, RECIPE)", required = true) @RequestParam
-          FavoriteType type,
-      @Parameter(description = "찜 대상 ID", required = true) @RequestParam Long targetId) {
+      @RequestParam FavoriteType type,
+      @RequestParam Long targetId) {
     return BaseResponse.success("찜 해제 성공", favoriteService.unlike(me.getId(), type, targetId));
   }
 
   @Operation(
+      summary = "찜 토글 (JSON 바디)",
+      description = "이미 찜이면 해제, 아니면 등록합니다. 바디 형식은 등록과 동일합니다.",
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "토글 성공",
+              content = @Content(schema = @Schema(implementation = FavoriteStatusResponse.class))))
+  @PostMapping("/toggle")
+  public BaseResponse<FavoriteStatusResponse> toggle(
+      @AuthenticationPrincipal CustomUserDetails me,
+      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+              required = true,
+              content = @Content(schema = @Schema(implementation = FavoriteToggleRequest.class)))
+          @RequestBody
+          FavoriteToggleRequest req) {
+    return BaseResponse.success(
+        "찜 토글 성공", favoriteService.toggle(me.getId(), req.type(), req.targetId()));
+  }
+
+  // ---------- 목록 조회 (정렬은 서버에서 createdAt DESC 고정) ----------
+  @Operation(
       summary = "찜한 식재료 목록 조회",
-      description = "현재 사용자가 찜한 식재료 목록을 페이지네이션 형태로 반환합니다.",
-      responses = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = IngredientCardDto.class)))
-      })
+      description =
+          """
+          페이지네이션으로 찜한 식재료를 반환합니다.
+          - 쿼리: page, size (예: page=0&size=20)
+          - 정렬: 서버에서 '찜한 시각(createdAt) DESC'로 고정
+          - 각 항목: productNo(id), productName, imageUrl, likedAt
+          """,
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "조회 성공",
+              content = @Content(schema = @Schema(implementation = IngredientCardDto.class))))
   @GetMapping("/ingredients")
   public BaseResponse<Page<IngredientCardDto>> favoriteIngredients(
       @AuthenticationPrincipal CustomUserDetails me,
-      @Parameter(
-              description =
-                  "페이지네이션 정보 (예: page=0, size=20, sort=createdAt,desc)\n"
-                      + "기본: size=20, createdAt DESC")
-          @PageableDefault(size = 20)
-          Pageable pageable) {
+      @Parameter(description = "예) page=0&size=20") Pageable pageable) {
+
+    // 외부 sort를 제거 (레포에서 createdAt DESC 고정)
+    Pageable safe = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
     return BaseResponse.success(
-        "찜한 식재료 목록 조회 성공",
-        favoriteRepository.findIngredientCards(me.getId(), FavoriteType.INGREDIENT, pageable));
+        "찜한 식재료 목록 조회 성공", favoriteService.listFavoriteIngredients(me.getId(), safe));
   }
 
   @Operation(
       summary = "찜한 레시피 목록 조회",
-      description = "현재 사용자가 찜한 레시피 목록을 페이지네이션 형태로 반환합니다.",
-      responses = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = RecipeCardDto.class)))
-      })
+      description =
+          """
+          페이지네이션으로 찜한 레시피를 반환합니다.
+          - 쿼리: page, size (예: page=0&size=20)
+          - 정렬: 서버에서 '찜한 시각(createdAt) DESC'로 고정
+          - 각 항목: recipeId, recipeName, likedAt
+          - 레시피 이미지는 프론트에서 고정 이미지로 처리
+          """,
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "조회 성공",
+              content = @Content(schema = @Schema(implementation = RecipeCardDto.class))))
   @GetMapping("/recipes")
   public BaseResponse<Page<RecipeCardDto>> favoriteRecipes(
       @AuthenticationPrincipal CustomUserDetails me,
-      @Parameter(
-              description =
-                  "페이지네이션 정보 (예: page=0, size=20, sort=createdAt,desc)\n"
-                      + "기본: size=20, createdAt DESC")
-          @PageableDefault(size = 20)
-          Pageable pageable) {
+      @Parameter(description = "예) page=0&size=20") Pageable pageable) {
+
+    Pageable safe = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
     return BaseResponse.success(
-        "찜한 레시피 목록 조회 성공",
-        favoriteRepository.findRecipeCards(me.getId(), FavoriteType.RECIPE, pageable));
+        "찜한 레시피 목록 조회 성공", favoriteService.listFavoriteRecipes(me.getId(), safe));
   }
 }
