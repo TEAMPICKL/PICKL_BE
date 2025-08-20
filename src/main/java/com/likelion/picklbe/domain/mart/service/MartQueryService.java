@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.likelion.picklbe.domain.brand.BrandImageResolver;
 import com.likelion.picklbe.domain.marketplace.dto.response.MarketMarkerResponse;
 import com.likelion.picklbe.global.api.mart.client.KakaoLocalClient;
 import com.likelion.picklbe.global.api.mart.dto.KakaoCategoryResponse;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MartQueryService {
 
   private final KakaoLocalClient kakao;
+  private final BrandImageResolver brandImageResolver; // 주입 유지
 
   public List<MarketMarkerResponse> getMarts(
       double minX, double minY, double maxX, double maxY, Integer page, Integer size) {
@@ -49,16 +51,20 @@ public class MartQueryService {
 
     return resp.getDocuments().stream()
         .map(
-            d ->
-                MarketMarkerResponse.builder()
-                    .id(d.getId())
-                    .name(d.getPlaceName())
-                    .category("대형마트")
-                    .address(first(d.getRoadAddressName(), d.getAddressName()))
-                    .lng(parse(d.getX()))
-                    .lat(parse(d.getY()))
-                    .parking(null)
-                    .build())
+            d -> {
+              String name = d.getPlaceName();
+              return MarketMarkerResponse.builder()
+                  .id(d.getId())
+                  .name(name)
+                  .category("대형마트")
+                  .address(first(d.getRoadAddressName(), d.getAddressName()))
+                  .lng(parse(d.getX()))
+                  .lat(parse(d.getY()))
+                  .parking(null)
+                  .brandCode(brandImageResolver.resolveBrandCode(name))
+                  .imageUrl(brandImageResolver.resolveImageUrl(name))
+                  .build();
+            })
         .toList();
   }
 
