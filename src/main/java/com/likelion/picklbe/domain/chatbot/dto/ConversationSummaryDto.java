@@ -18,4 +18,7 @@ public class ConversationSummaryDto {
 
   @Schema(description = "대화 제목", example = "제철 음식 추천")
   private String title;
+
+  @Schema(description = "생성일 라벨", example = "8월 20일")
+  private String createdLabel;
 }

@@ -1,8 +1,10 @@
 package com.likelion.picklbe.domain.chatbot.service;
 
 import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +48,9 @@ public class ChatbotService {
   private final MessageRepository messageRepo;
   private final UserMemoryRepository memoryRepo;
   private final WebClient langchainWebClient;
+
+  private static final DateTimeFormatter KOR_DAY_FMT =
+      DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN);
 
   private final java.util.Set<Long> inflightConversations =
       java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -133,7 +138,7 @@ public class ChatbotService {
             .role(MessageRole.USER)
             .content(req.message())
             .build());
-
+    conversationRepo.touchModifiedAt(conv.getId());
     if (isNew) {
       tryUpdateSmartTitleAsync(req.message(), req.userId(), conv);
     }
@@ -176,7 +181,7 @@ public class ChatbotService {
             .role(MessageRole.ASSISTANT)
             .content(res.reply())
             .build());
-
+    conversationRepo.touchModifiedAt(conv.getId());
     return new ChatResponse(conv.getId(), res.reply());
   }
 
@@ -225,7 +230,7 @@ public class ChatbotService {
             .role(MessageRole.USER)
             .content(req.message())
             .build());
-
+    conversationRepo.touchModifiedAt(conv.getId());
     if (isNewRequest) {
       tryUpdateSmartTitleAsync(req.message(), req.userId(), conv);
     }
@@ -307,6 +312,7 @@ public class ChatbotService {
                               .role(MessageRole.ASSISTANT)
                               .content(full)
                               .build());
+                      conversationRepo.touchModifiedAt(conv.getId());
                     }
                   } finally {
                     inflightConversations.remove(conv.getId());
@@ -379,7 +385,14 @@ public class ChatbotService {
 
   public List<ConversationSummaryDto> listConversationSummaries(Long userId) {
     return conversationRepo.findByUserIdOrderByModifiedAtDesc(userId).stream()
-        .map(c -> new ConversationSummaryDto(c.getId(), c.getTitle()))
-        .collect(Collectors.toList());
+        .map(
+            c ->
+                ConversationSummaryDto.builder()
+                    .id(c.getId())
+                    .title(c.getTitle())
+                    .createdLabel(
+                        c.getCreatedAt() == null ? "" : c.getCreatedAt().format(KOR_DAY_FMT))
+                    .build())
+        .toList();
   }
 }
