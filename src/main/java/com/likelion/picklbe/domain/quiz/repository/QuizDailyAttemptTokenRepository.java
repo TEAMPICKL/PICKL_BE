@@ -17,8 +17,12 @@ public interface QuizDailyAttemptTokenRepository
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
-      "select t from QuizDailyAttemptToken t "
-          + "where t.userId = :userId and t.tokenDate = :today")
+      """
+      select t
+      from QuizDailyAttemptToken t
+      where t.userId = :userId
+        and t.tokenDate = :today
+      """)
   Optional<QuizDailyAttemptToken> findByUserIdAndDateForUpdate(
       @Param("userId") Long userId, @Param("today") LocalDate today);
 }
