@@ -1,6 +1,8 @@
 package com.likelion.picklbe.domain.point.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +22,9 @@ public class PointService {
 
   private final PointWalletRepository walletRepo;
   private final PointTxRepository txRepo;
+
   private static final long DEFAULT_BALANCE = 30_000L;
+  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   /** 지갑 없으면 30000원으로 생성 후 반환 */
   @Transactional
@@ -48,7 +52,7 @@ public class PointService {
   }
 
   /**
-   * 포인트 적립(일반용) - 지갑 자동 생성 - 적립 트랜잭션 저장
+   * 일반 적립(무조건 적립) - 지갑 자동 생성, 트랜잭션 기록
    *
    * @return 적립 후 잔액
    */
@@ -65,38 +69,37 @@ public class PointService {
     tx.setAmount(amount);
     tx.setReason(reason);
     tx.setRefId(refId);
-    tx.setCreatedAt(LocalDateTime.now());
+    tx.setCreatedAt(LocalDateTime.now(KST)); // KST로 통일
     txRepo.save(tx);
 
     return wallet.getBalance();
   }
 
   /**
-   * 일일 퀴즈 보상 적립 (idempotent by reason+refId) - 동일 userId/QUIZ_DAILY/dailyQuizId 조합이 존재하면 적립하지 않음
+   * 일일 퀴즈 보상 적립 (중복 허용) - 맞출 때마다 적립 시도번호/날짜를 reason 메타로 함께 저장하고, refId에는 quizPoolId를 저장.
    *
-   * @return 실제 적립했으면 true, 이미 적립되어 있으면 false
+   * @return 적립 후 잔액
    */
   @Transactional
-  public boolean earnDailyQuizOnce(Long userId, long amount, Long dailyQuizId) {
-    // 이미 적립했으면 false
-    if (txRepo.existsByUserIdAndReasonAndRefId(userId, "QUIZ_DAILY", dailyQuizId)) {
-      return false;
-    }
+  public long earnDailyQuiz(
+      Long userId, long amount, Long quizPoolId, int attemptNo, LocalDate quizDate) {
+    // reason에 메타 포함 (엔티티에 별도 필드가 없으므로 안전한 문자열 인코딩)
+    String reasonWithMeta = String.format("QUIZ_DAILY[attempt=%d,date=%s]", attemptNo, quizDate);
+
+    // 지갑
+    PointWallet wallet = getOrCreateWallet(userId);
+    wallet.setBalance(wallet.getBalance() + amount);
+    walletRepo.save(wallet);
 
     // 트랜잭션 기록
     PointTx tx = new PointTx();
     tx.setUserId(userId);
     tx.setAmount(amount);
-    tx.setReason("QUIZ_DAILY");
-    tx.setRefId(dailyQuizId);
-    tx.setCreatedAt(LocalDateTime.now());
+    tx.setReason(reasonWithMeta); // 메타 포함
+    tx.setRefId(quizPoolId); // 퀴즈 식별자
+    tx.setCreatedAt(LocalDateTime.now(KST)); // 기록 시각은 KST 현재
     txRepo.save(tx);
 
-    // 지갑 반영
-    PointWallet wallet = getOrCreateWallet(userId);
-    wallet.setBalance(wallet.getBalance() + amount);
-    walletRepo.save(wallet);
-
-    return true;
+    return wallet.getBalance();
   }
 }
