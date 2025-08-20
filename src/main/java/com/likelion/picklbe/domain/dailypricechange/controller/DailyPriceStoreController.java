@@ -1,19 +1,10 @@
 package com.likelion.picklbe.domain.dailypricechange.controller;
 
-import com.likelion.picklbe.domain.dailypricechange.entity.KamisRawPayload;
-import com.likelion.picklbe.domain.dailypricechange.response.CategoryDailyPriceChangeResponse;
-import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChangeResponse;
-import com.likelion.picklbe.domain.dailypricechange.service.DailyPriceChangePersistService;
-import com.likelion.picklbe.global.response.BaseResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +12,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.likelion.picklbe.domain.dailypricechange.entity.KamisRawPayload;
+import com.likelion.picklbe.domain.dailypricechange.response.CategoryDailyPriceChangeResponse;
+import com.likelion.picklbe.domain.dailypricechange.response.ItemDailyPriceChangeResponse;
+import com.likelion.picklbe.domain.dailypricechange.service.DailyPriceChangePersistService;
+import com.likelion.picklbe.global.response.BaseResponse;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/daily-price-change/store")
@@ -36,9 +39,9 @@ public class DailyPriceStoreController {
       description = "KAMIS에서 불러온 원본/품목/카테고리 데이터를 DB에 저장합니다. date 미지정 시 KST 오늘 기준.")
   public BaseResponse<Map<String, Object>> ingest(
       @Parameter(description = "적재 대상 날짜(생략 시 오늘)")
-      @RequestParam(required = false)
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-      LocalDate date) {
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date) {
 
     var res = service.ingestLatest(date);
     return BaseResponse.success(
@@ -74,12 +77,12 @@ public class DailyPriceStoreController {
       description = "date=YYYY-MM-DD(옵션), market=소매|도매(옵션). date 생략 시 최신 수집일 사용")
   public BaseResponse<List<ItemDailyPriceChangeResponse>> items(
       @Parameter(description = "조회 날짜(생략 시 최신 수집일)")
-      @RequestParam(required = false)
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-      LocalDate date,
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
       @Parameter(description = "시장 구분", example = "소매")
-      @RequestParam(name = "market", required = false)
-      String market) {
+          @RequestParam(name = "market", required = false)
+          String market) {
 
     return BaseResponse.success("ok", service.getStoredItems(date, market));
   }
@@ -90,18 +93,18 @@ public class DailyPriceStoreController {
       description = "date=YYYY-MM-DD(옵션), market=소매|도매(옵션). date 생략 시 최신 수집일 사용")
   public BaseResponse<List<CategoryDailyPriceChangeResponse>> category(
       @Parameter(description = "조회 날짜(생략 시 최신 수집일)")
-      @RequestParam(required = false)
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-      LocalDate date,
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
       @Parameter(
-          description = "시장 구분",
-          example = "도매",
-          examples = {
-              @ExampleObject(name = "Retail", value = "소매"),
-              @ExampleObject(name = "Wholesale", value = "도매")
-          })
-      @RequestParam(name = "market", required = false)
-      String market) {
+              description = "시장 구분",
+              example = "도매",
+              examples = {
+                @ExampleObject(name = "Retail", value = "소매"),
+                @ExampleObject(name = "Wholesale", value = "도매")
+              })
+          @RequestParam(name = "market", required = false)
+          String market) {
 
     return BaseResponse.success("ok", service.getStoredCategories(date, market));
   }
@@ -112,20 +115,20 @@ public class DailyPriceStoreController {
       description = "name=상품명 키워드(부분일치, 대소문자 무시). date, market(소매/도매)은 옵션. date 생략 시 최신 수집일 사용")
   public BaseResponse<List<ItemDailyPriceChangeResponse>> searchItemsByName(
       @Parameter(description = "상품명 검색어(부분일치)", example = "배추") @RequestParam(name = "name")
-      String name,
+          String name,
       @Parameter(description = "조회 날짜(생략 시 최신 수집일)")
-      @RequestParam(required = false)
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-      LocalDate date,
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
       @Parameter(
-          description = "시장 구분",
-          example = "소매",
-          examples = {
-              @ExampleObject(name = "Retail", value = "소매"),
-              @ExampleObject(name = "Wholesale", value = "도매")
-          })
-      @RequestParam(name = "market", required = false)
-      String market) {
+              description = "시장 구분",
+              example = "소매",
+              examples = {
+                @ExampleObject(name = "Retail", value = "소매"),
+                @ExampleObject(name = "Wholesale", value = "도매")
+              })
+          @RequestParam(name = "market", required = false)
+          String market) {
 
     String keyword = name == null ? "" : name.trim();
     if (keyword.isBlank()) {
@@ -150,10 +153,8 @@ public class DailyPriceStoreController {
       summary = "DEV - 저장된 원본 JSON 최신건",
       description = "date=YYYY-MM-DD 의 가장 최근 수집 건을 반환(원본 payload 포함)")
   public BaseResponse<Map<String, Object>> rawLatest(
-      @Parameter(description = "조회 날짜")
-      @RequestParam
-      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-      LocalDate date) {
+      @Parameter(description = "조회 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date) {
 
     Optional<KamisRawPayload> opt = service.getLatestRaw(date);
     if (opt.isEmpty()) {

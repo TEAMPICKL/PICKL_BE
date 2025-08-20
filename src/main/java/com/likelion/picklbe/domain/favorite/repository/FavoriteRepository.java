@@ -16,10 +16,9 @@ import com.likelion.picklbe.domain.favorite.entity.Favorite.FavoriteType;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
 
-  // ✅ int → long (카운트는 long이 안전)
   long countByUserIdAndType(Long userId, FavoriteType type);
 
-  // 편의 헬퍼 (선택)
+  // 편의 헬퍼
   default long countIngredients(Long userId) {
     return countByUserIdAndType(userId, FavoriteType.INGREDIENT);
   }
@@ -69,9 +68,7 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     Timestamp getLikedAt();
   }
 
-  /**
-   * 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑)
-   */
+  /** 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑) */
   default Page<RecipeCardDto> findRecipeCards(Long userId, FavoriteType type, Pageable pageable) {
     // 방어적으로 타입 확인 (컨트롤러에서 RECIPE로만 호출됨)
     if (type != FavoriteType.RECIPE) {
@@ -91,28 +88,47 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
    * 이미지: DB의 image_url 그대로 사용
    * ========================= */
 
-  // v_latest_kamis_item_price 뷰를 쓰는 버전
+  // kamis_item_price에서 product_no별 최신행을 뽑아 조인 (동일 날짜 다건 대비)
   @Query(
       value =
           """
-                select
-                  kip.product_no    as productNo,
-                  kip.product_name  as productName,
-                  kip.image_url     as imageUrl,
-                  f.created_at      as likedAt
-                from favorites f
-                join v_latest_kamis_item_price kip
-                  on kip.product_no = f.target_id
-                where f.user_id = :userId
-                  and f.type = 'INGREDIENT'
-                order by f.created_at desc
+                SELECT
+                  kip.product_no    AS productNo,
+                  kip.product_name  AS productName,
+                  kip.image_url     AS imageUrl,
+                  f.created_at      AS likedAt
+                FROM favorites f
+                JOIN (
+                  SELECT k.*
+                  FROM kamis_item_price k
+                  JOIN (
+                    SELECT product_no, MAX(price_date) AS max_date
+                    FROM kamis_item_price
+                    GROUP BY product_no
+                  ) mx
+                    ON mx.product_no = k.product_no
+                   AND mx.max_date  = k.price_date
+                  /* 동일 날짜 다건 대비 (선택) */
+                  JOIN (
+                    SELECT product_no, price_date, MAX(id) AS max_id
+                    FROM kamis_item_price
+                    GROUP BY product_no, price_date
+                  ) mi
+                    ON mi.product_no = k.product_no
+                   AND mi.price_date = k.price_date
+                   AND mi.max_id     = k.id
+                ) kip
+                  ON kip.product_no = CAST(f.target_id AS UNSIGNED)
+                WHERE f.user_id = :userId
+                  AND f.type = 'INGREDIENT'
+                ORDER BY f.created_at DESC
               """,
       countQuery =
           """
-                select count(*)
-                from favorites f
-                where f.user_id = :userId
-                  and f.type = 'INGREDIENT'
+                SELECT COUNT(*)
+                FROM favorites f
+                WHERE f.user_id = :userId
+                  AND f.type = 'INGREDIENT'
               """,
       nativeQuery = true)
   Page<IngredientCardRow> findIngredientCardRows(@Param("userId") Long userId, Pageable pageable);
@@ -128,9 +144,7 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     Timestamp getLikedAt();
   }
 
-  /**
-   * 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑)
-   */
+  /** 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑) */
   default Page<IngredientCardDto> findIngredientCards(
       Long userId, FavoriteType type, Pageable pageable) {
     if (type != FavoriteType.INGREDIENT) {
