@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.likelion.picklbe.domain.favorite.dto.IngredientCardDto;
 import com.likelion.picklbe.domain.favorite.dto.RecipeCardDto;
 import com.likelion.picklbe.domain.favorite.dto.request.FavoriteToggleRequest;
+import com.likelion.picklbe.domain.favorite.dto.response.FavoriteCountsResponse;
 import com.likelion.picklbe.domain.favorite.dto.response.FavoriteStatusResponse;
 import com.likelion.picklbe.domain.favorite.entity.Favorite.FavoriteType;
 import com.likelion.picklbe.domain.favorite.repository.FavoriteRepository;
@@ -38,10 +39,10 @@ public class FavoriteController {
       summary = "찜 상태 조회",
       description =
           """
-          특정 대상이 현재 사용자에게 '찜'되어 있는지 확인합니다.
-          - 쿼리: type(INGREDIENT|RECIPE), targetId
-          - 응답: isLiked, likedAt
-          """,
+              특정 대상이 현재 사용자에게 '찜'되어 있는지 확인합니다.
+              - 쿼리: type(INGREDIENT|RECIPE), targetId
+              - 응답: isLiked, likedAt
+              """,
       responses =
           @ApiResponse(
               responseCode = "200",
@@ -61,13 +62,13 @@ public class FavoriteController {
       summary = "찜 등록 (JSON 바디)",
       description =
           """
-          대상 타입과 ID를 JSON 바디로 보내 '찜 등록'합니다.
-          예시 바디:
-          {
-            "type": "INGREDIENT",
-            "targetId": 339
-          }
-          """,
+              대상 타입과 ID를 JSON 바디로 보내 '찜 등록'합니다.
+              예시 바디:
+              {
+                "type": "INGREDIENT",
+                "targetId": 339
+              }
+              """,
       responses =
           @ApiResponse(
               responseCode = "200",
@@ -126,11 +127,11 @@ public class FavoriteController {
       summary = "찜한 식재료 목록 조회",
       description =
           """
-          페이지네이션으로 찜한 식재료를 반환합니다.
-          - 쿼리: page, size (예: page=0&size=20)
-          - 정렬: 서버에서 '찜한 시각(createdAt) DESC'로 고정
-          - 각 항목: productNo(id), productName, imageUrl, likedAt
-          """,
+              페이지네이션으로 찜한 식재료를 반환합니다.
+              - 쿼리: page, size (예: page=0&size=20)
+              - 정렬: 서버에서 '찜한 시각(createdAt) DESC'로 고정
+              - 각 항목: productNo(id), productName, imageUrl, likedAt
+              """,
       responses =
           @ApiResponse(
               responseCode = "200",
@@ -151,12 +152,12 @@ public class FavoriteController {
       summary = "찜한 레시피 목록 조회",
       description =
           """
-          페이지네이션으로 찜한 레시피를 반환합니다.
-          - 쿼리: page, size (예: page=0&size=20)
-          - 정렬: 서버에서 '찜한 시각(createdAt) DESC'로 고정
-          - 각 항목: recipeId, recipeName, likedAt
-          - 레시피 이미지는 프론트에서 고정 이미지로 처리
-          """,
+              페이지네이션으로 찜한 레시피를 반환합니다.
+              - 쿼리: page, size (예: page=0&size=20)
+              - 정렬: 서버에서 '찜한 시각(createdAt) DESC'로 고정
+              - 각 항목: recipeId, recipeName, likedAt
+              - 레시피 이미지는 프론트에서 고정 이미지로 처리
+              """,
       responses =
           @ApiResponse(
               responseCode = "200",
@@ -170,5 +171,20 @@ public class FavoriteController {
     Pageable safe = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
     return BaseResponse.success(
         "찜한 레시피 목록 조회 성공", favoriteService.listFavoriteRecipes(me.getId(), safe));
+  }
+
+  // ---------- 개수 조회 ----------
+  @Operation(
+      summary = "찜 개수 조회",
+      description = "현재 사용자의 찜 개수(식재료, 레시피)를 한 번에 반환합니다.",
+      responses =
+          @ApiResponse(
+              responseCode = "200",
+              description = "조회 성공",
+              content = @Content(schema = @Schema(implementation = FavoriteCountsResponse.class))))
+  @GetMapping("/counts")
+  public BaseResponse<FavoriteCountsResponse> favoriteCounts(
+      @AuthenticationPrincipal CustomUserDetails me) {
+    return BaseResponse.success("찜 개수 조회 성공", favoriteService.counts(me.getId()));
   }
 }

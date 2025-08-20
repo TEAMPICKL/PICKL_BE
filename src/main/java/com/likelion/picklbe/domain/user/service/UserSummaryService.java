@@ -32,16 +32,20 @@ public class UserSummaryService {
 
     long days = FriendDays.sinceInclusive(u.getCreatedAt().atZone(ZoneId.of("UTC")).toInstant());
 
-    // 잔액은 지갑에서 직접 조회
+    // 지갑 잔액
     long points = pointWalletRepository.findById(userId).map(PointWallet::getBalance).orElse(0L);
 
-    int favIng = favoriteRepository.countByUserIdAndType(userId, FavoriteType.INGREDIENT);
-    int favRec = favoriteRepository.countByUserIdAndType(userId, FavoriteType.RECIPE);
+    // favorite 카운트: repository는 long을 반환하므로 안전 캐스팅
+    long favIngLong = favoriteRepository.countByUserIdAndType(userId, FavoriteType.INGREDIENT);
+    long favRecLong = favoriteRepository.countByUserIdAndType(userId, FavoriteType.RECIPE);
+    int favIng = Math.toIntExact(favIngLong);
+    int favRec = Math.toIntExact(favRecLong);
+
     int hist = historyRepository.countByUserId(userId);
 
     return UserSummaryResponse.builder()
         .nickname(u.getNickname() != null ? u.getNickname() : u.getUsername())
-        .region(null) // 실제 필드에 맞게 치환
+        .region(null) // TODO: 실제 필드로 치환
         .points(points)
         .daysSinceFriend(days)
         .favoriteIngredientCount(favIng)
