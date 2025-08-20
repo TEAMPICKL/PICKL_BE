@@ -82,4 +82,10 @@ public class KamisItemPrice {
 
   @Column(name = "imageUrl", length = 512)
   private String imageUrl;
+
+  private String productClsCode;
+  private String itemCode;
+  private String kindCode;
+  private String gradeRank;
+  private String countyCode;
 }
