@@ -45,7 +45,7 @@ public class UserSummaryService {
 
     return UserSummaryResponse.builder()
         .nickname(u.getNickname() != null ? u.getNickname() : u.getUsername())
-        .region(null) // TODO: 실제 필드로 치환
+        .region(null)
         .points(points)
         .daysSinceFriend(days)
         .favoriteIngredientCount(favIng)
