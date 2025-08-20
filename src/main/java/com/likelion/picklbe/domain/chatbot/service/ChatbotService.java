@@ -21,6 +21,7 @@ import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatRequest;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatResponse;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ConversationDetailResponse;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.MessageItem;
+import com.likelion.picklbe.domain.chatbot.dto.ConversationSummaryDto;
 import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.ChatRes;
 import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.HistoryReq;
 import com.likelion.picklbe.domain.chatbot.dto.PythonDtos.Turn;
@@ -374,5 +375,11 @@ public class ChatbotService {
 
     // 4) 대화 삭제
     conversationRepo.delete(conv);
+  }
+
+  public List<ConversationSummaryDto> listConversationSummaries(Long userId) {
+    return conversationRepo.findByUserIdOrderByModifiedAtDesc(userId).stream()
+        .map(c -> new ConversationSummaryDto(c.getId(), c.getTitle()))
+        .collect(Collectors.toList());
   }
 }
