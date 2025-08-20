@@ -42,17 +42,17 @@ public class QuizDailyService {
   private final UserDailyQuestionRepository udqRepo;
   private final PointService pointService;
 
+  /** 오늘의 퀴즈 조회 및 2회차 이상 문제 배정(쓰기 트랜잭션: 배정 저장 가능) */
   @Transactional
   public QuizDailyResponse getToday(Long userId) {
     LocalDate today = LocalDate.now(KST);
 
     int attempts = attemptRepo.countByUserIdAndQuizDate(userId, today);
-    int extra = getExtraGrantedToday(userId, today);
+    int extra = getExtraGrantedToday(userId, today); // FOR UPDATE 사용 → write Tx 필수
     int remaining = Math.max(0, 1 + extra - attempts);
     int nextNo = attempts + 1;
 
-    Long quizPoolIdToShow;
-
+    // 1회차는 DailyQuiz 고정
     if (nextNo == 1) {
       DailyQuiz dq =
           dailyQuizRepo
@@ -61,7 +61,8 @@ public class QuizDailyService {
       return QuizDailyResponse.of(today, dq.getIngredient(), dq.getStatement(), remaining);
     }
 
-    // 2회차 이상: 필요 시 배정 저장(쓰기)
+    // 2회차 이상: 배정이 있으면 재사용, 없으면 새로 배정 후 저장
+    Long quizPoolIdToShow;
     var assigned = udqRepo.findOne(userId, today, nextNo);
     if (assigned.isPresent()) {
       quizPoolIdToShow = assigned.get().getQuizPoolId();
@@ -70,7 +71,6 @@ public class QuizDailyService {
       var page = PageRequest.of(0, 1);
 
       var pickedList = quizPoolRepo.pickOneExcluding(used, used.size(), page);
-
       if (pickedList.isEmpty()) {
         var cycled = quizPoolRepo.pickOneExcluding(Collections.emptyList(), 0, page);
         if (cycled.isEmpty()) {
@@ -86,7 +86,7 @@ public class QuizDailyService {
       row.setQuizDate(today);
       row.setAttemptNo(nextNo);
       row.setQuizPoolId(quizPoolIdToShow);
-      udqRepo.save(row); // write
+      udqRepo.save(row);
     }
 
     QuizPool qp =
@@ -96,12 +96,13 @@ public class QuizDailyService {
     return QuizDailyResponse.of(today, qp.getIngredient(), qp.getStatement(), remaining);
   }
 
+  /** 정답 제출 및 포인트/시도 기록 */
   @Transactional
   public AnswerResult submit(Long userId, boolean answer) {
     LocalDate today = LocalDate.now(KST);
 
     int attempts = attemptRepo.countByUserIdAndQuizDate(userId, today);
-    int extra = getExtraGrantedToday(userId, today);
+    int extra = getExtraGrantedToday(userId, today); // FOR UPDATE
     int remaining = Math.max(0, 1 + extra - attempts);
     if (remaining <= 0) {
       throw ApiException.of(ErrorCode.ALREADY_ATTEMPTED);
@@ -127,22 +128,17 @@ public class QuizDailyService {
                     var page = PageRequest.of(0, 1);
                     var picked = quizPoolRepo.pickOneExcluding(used, used.size(), page);
 
+                    Long pid;
                     if (picked.isEmpty()) {
                       var cycled = quizPoolRepo.pickOneExcluding(Collections.emptyList(), 0, page);
                       if (cycled.isEmpty()) {
                         throw ApiException.of(ErrorCode.QUIZ_POOL_EMPTY);
                       }
-                      Long pid = cycled.get(0).getId();
-                      UserDailyQuestion row = new UserDailyQuestion();
-                      row.setUserId(userId);
-                      row.setQuizDate(today);
-                      row.setAttemptNo(nextNo);
-                      row.setQuizPoolId(pid);
-                      udqRepo.save(row);
-                      return pid;
+                      pid = cycled.get(0).getId();
+                    } else {
+                      pid = picked.get(0).getId();
                     }
 
-                    Long pid = picked.get(0).getId();
                     UserDailyQuestion row = new UserDailyQuestion();
                     row.setUserId(userId);
                     row.setQuizDate(today);
@@ -155,15 +151,15 @@ public class QuizDailyService {
 
     QuizPool qp = quizPoolRepo.findById(quizPoolId).orElseThrow();
     boolean correct = Boolean.TRUE.equals(qp.getAnswer()) == answer;
+
     int awarded = 0;
     Long walletBalance = null;
 
     if (correct) {
-      boolean firstTime = pointService.earnDailyQuizOnce(userId, (long) QUIZ_REWARD, qp.getId());
-      if (firstTime) {
-        awarded = QUIZ_REWARD;
-        walletBalance = pointService.getBalance(userId);
-      }
+      // 맞출 때마다 적립 (중복 허용). 감사/추적을 위해 시도번호/날짜 함께 전달.
+      pointService.earnDailyQuiz(userId, (long) QUIZ_REWARD, qp.getId(), nextNo, today);
+      awarded = QUIZ_REWARD;
+      walletBalance = pointService.getBalance(userId);
     }
 
     QuizAttempt attempt = new QuizAttempt();
@@ -180,7 +176,7 @@ public class QuizDailyService {
         correct ? "CORRECT" : "WRONG", awarded, walletBalance, qp.getIngredient().getId());
   }
 
-  // 내부에서 FOR UPDATE를 사용하므로 이 메서드는 반드시 write 트랜잭션 안에서 호출되어야 함
+  /** 광고/추가시도권 누적 조회. 내부에서 PESSIMISTIC_WRITE(FOR UPDATE)를 사용하므로 반드시 write 트랜잭션에서 호출되어야 함. */
   private int getExtraGrantedToday(Long userId, LocalDate today) {
     return tokenRepo
         .findByUserIdAndDateForUpdate(userId, today)
@@ -188,6 +184,7 @@ public class QuizDailyService {
         .orElse(0);
   }
 
+  /** (스케줄러/관리자용) 오늘 퀴즈 없으면 생성 */
   @Transactional
   public DailyQuiz createTodayQuizIfAbsent() {
     LocalDate today = LocalDate.now(KST);
@@ -208,7 +205,7 @@ public class QuizDailyService {
               }
 
               QuizPool picked = candidates.get(0);
-              picked.setLastUsedDate(today);
+              picked.setLastUsedDate(today); // dirty checking
 
               DailyQuiz dq = new DailyQuiz();
               dq.setQuizDate(today);
