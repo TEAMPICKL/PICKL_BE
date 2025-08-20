@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.likelion.picklbe.domain.favorite.dto.IngredientCardDto;
 import com.likelion.picklbe.domain.favorite.dto.RecipeCardDto;
+import com.likelion.picklbe.domain.favorite.dto.response.FavoriteCountsResponse;
 import com.likelion.picklbe.domain.favorite.dto.response.FavoriteStatusResponse;
 import com.likelion.picklbe.domain.favorite.entity.Favorite;
 import com.likelion.picklbe.domain.favorite.entity.Favorite.FavoriteType;
@@ -69,5 +70,13 @@ public class FavoriteService {
   @Transactional(readOnly = true)
   public Page<IngredientCardDto> listFavoriteIngredients(Long userId, Pageable pageable) {
     return favoriteRepository.findIngredientCards(userId, FavoriteType.INGREDIENT, pageable);
+  }
+
+  /* 카운트 조회 */
+  @Transactional(readOnly = true)
+  public FavoriteCountsResponse counts(Long userId) {
+    long ingredient = favoriteRepository.countIngredients(userId);
+    long recipe = favoriteRepository.countRecipes(userId);
+    return new FavoriteCountsResponse(ingredient, recipe);
   }
 }

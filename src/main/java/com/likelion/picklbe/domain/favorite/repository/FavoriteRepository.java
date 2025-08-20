@@ -16,7 +16,17 @@ import com.likelion.picklbe.domain.favorite.entity.Favorite.FavoriteType;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
 
-  int countByUserIdAndType(Long userId, FavoriteType type);
+  // ✅ int → long (카운트는 long이 안전)
+  long countByUserIdAndType(Long userId, FavoriteType type);
+
+  // 편의 헬퍼 (선택)
+  default long countIngredients(Long userId) {
+    return countByUserIdAndType(userId, FavoriteType.INGREDIENT);
+  }
+
+  default long countRecipes(Long userId) {
+    return countByUserIdAndType(userId, FavoriteType.RECIPE);
+  }
 
   boolean existsByUserIdAndTypeAndTargetId(Long userId, FavoriteType type, Long targetId);
 
@@ -30,23 +40,23 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
   @Query(
       value =
           """
-            select
-              r.id           as id,
-              r.recipe_name  as recipeName,
-              f.created_at   as likedAt
-            from favorites f
-            join season_item_recipe r on r.id = f.target_id
-            where f.user_id = :userId
-              and f.type = 'RECIPE'
-            order by f.created_at desc
-          """,
+                select
+                  r.id           as id,
+                  r.recipe_name  as recipeName,
+                  f.created_at   as likedAt
+                from favorites f
+                join season_item_recipe r on r.id = f.target_id
+                where f.user_id = :userId
+                  and f.type = 'RECIPE'
+                order by f.created_at desc
+              """,
       countQuery =
           """
-            select count(*)
-            from favorites f
-            where f.user_id = :userId
-              and f.type = 'RECIPE'
-          """,
+                select count(*)
+                from favorites f
+                where f.user_id = :userId
+                  and f.type = 'RECIPE'
+              """,
       nativeQuery = true)
   Page<RecipeCardRow> findRecipeCardRows(@Param("userId") Long userId, Pageable pageable);
 
@@ -83,25 +93,25 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
   @Query(
       value =
           """
-            select
-              kip.product_no    as productNo,
-              kip.product_name  as productName,
-              kip.image_url     as imageUrl,
-              f.created_at      as likedAt
-            from favorites f
-            join v_latest_kamis_item_price kip
-              on kip.product_no = f.target_id
-            where f.user_id = :userId
-              and f.type = 'INGREDIENT'
-            order by f.created_at desc
-          """,
+                select
+                  kip.product_no    as productNo,
+                  kip.product_name  as productName,
+                  kip.image_url     as imageUrl,
+                  f.created_at      as likedAt
+                from favorites f
+                join v_latest_kamis_item_price kip
+                  on kip.product_no = f.target_id
+                where f.user_id = :userId
+                  and f.type = 'INGREDIENT'
+                order by f.created_at desc
+              """,
       countQuery =
           """
-            select count(*)
-            from favorites f
-            where f.user_id = :userId
-              and f.type = 'INGREDIENT'
-          """,
+                select count(*)
+                from favorites f
+                where f.user_id = :userId
+                  and f.type = 'INGREDIENT'
+              """,
       nativeQuery = true)
   Page<IngredientCardRow> findIngredientCardRows(@Param("userId") Long userId, Pageable pageable);
 
