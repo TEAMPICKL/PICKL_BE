@@ -1,6 +1,5 @@
 package com.likelion.picklbe.domain.quiz.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import jakarta.validation.Valid;
@@ -15,9 +14,7 @@ import com.likelion.picklbe.domain.quiz.dto.QuizAnswerResult;
 import com.likelion.picklbe.domain.quiz.dto.request.QuizAnswerRequest;
 import com.likelion.picklbe.domain.quiz.dto.response.QuizDailyResponse;
 import com.likelion.picklbe.domain.quiz.entity.DailyQuiz;
-import com.likelion.picklbe.domain.quiz.repository.DailyQuizRepository;
-import com.likelion.picklbe.domain.quiz.repository.QuizAttemptRepository;
-import com.likelion.picklbe.domain.quiz.service.QuizService;
+import com.likelion.picklbe.domain.quiz.service.QuizDailyService;
 import com.likelion.picklbe.global.security.annotation.AuthUser;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,9 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class QuizController {
 
-  private final QuizService quizService;
-  private final DailyQuizRepository dailyQuizRepo;
-  private final QuizAttemptRepository attemptRepo;
+  private final QuizDailyService quizDailyService;
 
   @Operation(summary = "오늘의 퀴즈 조회", description = "로그인한 사용자의 오늘의 OX 퀴즈를 조회합니다.")
   @ApiResponses({
@@ -44,23 +39,10 @@ public class QuizController {
   })
   @GetMapping("/daily")
   public QuizDailyResponse getDaily(@Parameter(hidden = true) @AuthUser Long userId) {
-    // 없으면 생성하고, 있으면 그대로 반환
-    DailyQuiz dq = quizService.createTodayQuizIfAbsent();
-
-    boolean attempted = attemptRepo.existsByUserIdAndQuizDate(userId, dq.getQuizDate());
-
-    return QuizDailyResponse.builder()
-        .date(dq.getQuizDate().toString())
-        .statement(dq.getStatement())
-        .options(List.of("O", "X"))
-        .attempted(attempted)
-        .ingredient(
-            QuizDailyResponse.IngredientDto.builder()
-                .id(dq.getIngredient().getId())
-                .name(dq.getIngredient().getName())
-                .icon(dq.getIngredient().getIcon())
-                .build())
-        .build();
+    // 1) 오늘의 퀴즈가 없다면 생성
+    quizDailyService.createTodayQuizIfAbsent();
+    // 2) 사용자 기준으로 오늘 보여줄 문제/남은 시도/버튼 상태 등을 계산해 응답
+    return quizDailyService.getToday(userId);
   }
 
   @Operation(summary = "오늘의 퀴즈 정답 제출", description = "정답을 제출하고, 결과/포인트/다음 이동 정보를 반환합니다.")
@@ -73,7 +55,8 @@ public class QuizController {
   public QuizAnswerResult answer(
       @Parameter(hidden = true) @AuthUser Long userId, @Valid @RequestBody QuizAnswerRequest req) {
 
-    var result = quizService.answer(userId, req.asBoolean(), req.getIdempotencyKey());
+    // 새 서비스 메서드명: submit (idempotencyKey는 사용 안 함)
+    var result = quizDailyService.submit(userId, req.asBoolean());
 
     boolean isCorrect = "CORRECT".equalsIgnoreCase(result.getResult());
     String cta = isCorrect ? "PRICE_CURRENT" : "PRICE_TODAY";
@@ -101,7 +84,7 @@ public class QuizController {
   })
   @PostMapping("/daily/admin/force-generate")
   public Map<String, String> forceGenerate() {
-    DailyQuiz dq = quizService.createTodayQuizIfAbsent();
+    DailyQuiz dq = quizDailyService.createTodayQuizIfAbsent();
     return Map.of("quizDate", dq.getQuizDate().toString(), "id", String.valueOf(dq.getId()));
   }
 }

@@ -31,15 +31,28 @@ public interface QuizPoolRepository extends JpaRepository<QuizPool, Long> {
   @Query(
       value =
           """
-      SELECT qp.id AS quizId, i.name AS ingredientName, qp.statement AS statement, i.icon_url AS icon
-      FROM quiz_pool qp
-      JOIN ingredient i ON i.id = qp.ingredient_id
-      WHERE qp.is_active = true
-        AND i.icon_url IS NOT NULL
-        AND i.name NOT IN ('미역','대파','다시마','곶감')
-      ORDER BY RAND()
-      LIMIT 1
-      """,
+              SELECT qp.id AS quizId, i.name AS ingredientName, qp.statement AS statement, i.icon_url AS icon
+              FROM quiz_pool qp
+              JOIN ingredient i ON i.id = qp.ingredient_id
+              WHERE qp.is_active = true
+                AND i.icon_url IS NOT NULL
+                AND i.name NOT IN ('미역','대파','다시마','곶감')
+              ORDER BY RAND()
+              LIMIT 1
+              """,
       nativeQuery = true)
   Optional<Map<String, Object>> pickRandomWithIcon();
+
+  // 특정 ID들을 제외하고 랜덤으로 퀴즈 뽑기
+  @Query(
+      """
+          SELECT q FROM QuizPool q
+          WHERE q.isActive = true
+            AND (:excludeSize = 0 OR q.id NOT IN :exclude)
+          ORDER BY function('RAND')
+          """)
+  List<QuizPool> pickOneExcluding(
+      @Param("exclude") List<Long> exclude,
+      @Param("excludeSize") int excludeSize,
+      Pageable pageable);
 }

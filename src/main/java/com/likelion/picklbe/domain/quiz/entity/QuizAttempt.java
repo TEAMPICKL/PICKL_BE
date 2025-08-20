@@ -39,6 +39,9 @@ public class QuizAttempt {
   @Column(name = "attempt_no", nullable = false)
   private Integer attemptNo = 1;
 
+  @Column(name = "quiz_pool_id")
+  private Long quizPoolId;
+
   @Column(nullable = false)
   private Boolean answer; // 사용자 제출 O/X
 
