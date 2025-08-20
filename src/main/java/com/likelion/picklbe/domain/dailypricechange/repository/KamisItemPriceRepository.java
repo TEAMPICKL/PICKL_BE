@@ -54,40 +54,55 @@ public interface KamisItemPriceRepository extends JpaRepository<KamisItemPrice, 
   @Query(
       value =
           """
-            select distinct k.productNo
-              from KamisItemPrice k
-             where (:priceDate is null or k.priceDate = :priceDate)
-               and (:market   is null or k.productClsName = :market)
-               and k.productNo is not null
-             order by k.productNo
-          """,
+                select distinct k.productNo
+                  from KamisItemPrice k
+                 where (:priceDate is null or k.priceDate = :priceDate)
+                   and (:market   is null or k.productClsName = :market)
+                   and k.productNo is not null
+                 order by k.productNo
+              """,
       countQuery =
           """
-            select count(distinct k.productNo)
-              from KamisItemPrice k
-             where (:priceDate is null or k.priceDate = :priceDate)
-               and (:market   is null or k.productClsName = :market)
-               and k.productNo is not null
-          """)
+                select count(distinct k.productNo)
+                  from KamisItemPrice k
+                 where (:priceDate is null or k.priceDate = :priceDate)
+                   and (:market   is null or k.productClsName = :market)
+                   and k.productNo is not null
+              """)
   Page<String> findDistinctProductNo(
       @Param("priceDate") LocalDate priceDate, @Param("market") String market, Pageable pageable);
 
   // ---- (카테고리, 아이템, 품종) 조합 조회
   @Query(
       """
-        select distinct i.categoryCode as categoryCode,
-                        i.itemCode     as itemCode,
-                        i.kindCode     as kindCode
-          from KamisItemPrice i
-         where i.priceDate = :date
-           and i.itemCode is not null
-           and i.kindCode is not null
-           and (:categoryCode  is null or i.categoryCode  = :categoryCode)
-           and (:productClsCode is null or i.productClsCode = :productClsCode)
-         order by i.categoryCode asc, i.itemCode asc
-      """)
+            select distinct i.categoryCode as categoryCode,
+                            i.itemCode     as itemCode,
+                            i.kindCode     as kindCode
+              from KamisItemPrice i
+             where i.priceDate = :date
+               and i.itemCode is not null
+               and i.kindCode is not null
+               and (:categoryCode  is null or i.categoryCode  = :categoryCode)
+               and (:productClsCode is null or i.productClsCode = :productClsCode)
+             order by i.categoryCode asc, i.itemCode asc
+          """)
   List<ItemKindCatView> findDistinctItemKindPairs(
       @Param("date") LocalDate date,
       @Param("categoryCode") String categoryCode,
       @Param("productClsCode") String productClsCode);
+
+  // 이미지 없는 것들 중 startId 이상만
+  List<KamisItemPrice> findByPriceDateAndIdGreaterThanEqualAndImageUrlIsNullOrderByIdAsc(
+      LocalDate date, Long startId, Pageable pageable);
+
+  List<KamisItemPrice>
+      findByPriceDateAndProductClsNameAndIdGreaterThanEqualAndImageUrlIsNullOrderByIdAsc(
+          LocalDate date, String clsName, Long startId, Pageable pageable);
+
+  // refresh 모드일 때도 대비
+  List<KamisItemPrice> findByPriceDateAndIdGreaterThanEqualOrderByIdAsc(
+      LocalDate date, Long startId, Pageable pageable);
+
+  List<KamisItemPrice> findByPriceDateAndProductClsNameAndIdGreaterThanEqualOrderByIdAsc(
+      LocalDate date, String clsName, Long startId, Pageable pageable);
 }

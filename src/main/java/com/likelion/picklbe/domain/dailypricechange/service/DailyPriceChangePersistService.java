@@ -187,10 +187,10 @@ public class DailyPriceChangePersistService {
   // ========= 이미지 보충 =========
   @Transactional
   public Map<String, Object> ingestMissingImages(
-      Integer batchSize, LocalDate dateOrNull, String market, boolean refresh) {
+      Integer batchSize, LocalDate dateOrNull, String market, boolean refresh, Long startId) {
+
     int size = (batchSize == null ? 50 : Math.min(50, Math.max(1, batchSize)));
     Pageable page = PageRequest.of(0, size, Sort.by(Sort.Direction.ASC, "id"));
-
     LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
 
     List<KamisItemPrice> targets = null;
@@ -198,13 +198,22 @@ public class DailyPriceChangePersistService {
 
     if (!refresh) {
       if (date == null) {
+        // 최신 수집일이 전혀 없다면 startId 필터를 못 씁니다.
         targets = itemRepo.findByImageUrlIsNullOrderByIdAsc(page);
       } else if (market == null || market.isBlank()) {
-        targets = itemRepo.findByPriceDateAndImageUrlIsNullOrderByIdAsc(date, page);
+        targets =
+            (startId != null)
+                ? itemRepo.findByPriceDateAndIdGreaterThanEqualAndImageUrlIsNullOrderByIdAsc(
+                    date, startId, page)
+                : itemRepo.findByPriceDateAndImageUrlIsNullOrderByIdAsc(date, page);
       } else {
         targets =
-            itemRepo.findByPriceDateAndProductClsNameAndImageUrlIsNullOrderByIdAsc(
-                date, market, page);
+            (startId != null)
+                ? itemRepo
+                    .findByPriceDateAndProductClsNameAndIdGreaterThanEqualAndImageUrlIsNullOrderByIdAsc(
+                        date, market, startId, page)
+                : itemRepo.findByPriceDateAndProductClsNameAndImageUrlIsNullOrderByIdAsc(
+                    date, market, page);
       }
       if (targets.isEmpty()) {
         refreshMode = true;
@@ -215,9 +224,16 @@ public class DailyPriceChangePersistService {
       if (date == null) {
         targets = itemRepo.findAllByOrderByIdAsc(page);
       } else if (market == null || market.isBlank()) {
-        targets = itemRepo.findByPriceDateOrderByIdAsc(date, page);
+        targets =
+            (startId != null)
+                ? itemRepo.findByPriceDateAndIdGreaterThanEqualOrderByIdAsc(date, startId, page)
+                : itemRepo.findByPriceDateOrderByIdAsc(date, page);
       } else {
-        targets = itemRepo.findByPriceDateAndProductClsNameOrderByIdAsc(date, market, page);
+        targets =
+            (startId != null)
+                ? itemRepo.findByPriceDateAndProductClsNameAndIdGreaterThanEqualOrderByIdAsc(
+                    date, market, startId, page)
+                : itemRepo.findByPriceDateAndProductClsNameOrderByIdAsc(date, market, page);
       }
     }
 

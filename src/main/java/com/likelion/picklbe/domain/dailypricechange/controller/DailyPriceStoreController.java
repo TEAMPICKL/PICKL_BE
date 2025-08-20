@@ -66,8 +66,10 @@ public class DailyPriceStoreController {
       @RequestParam(required = false) Integer batchSize,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
       @RequestParam(name = "market", required = false) String market,
-      @RequestParam(name = "refresh", required = false, defaultValue = "false") boolean refresh) {
-    Map<String, Object> res = service.ingestMissingImages(batchSize, date, market, refresh);
+      @RequestParam(name = "refresh", required = false, defaultValue = "false") boolean refresh,
+      @RequestParam(name = "startId", required = false) Long startId) {
+    Map<String, Object> res =
+        service.ingestMissingImages(batchSize, date, market, refresh, startId);
     return BaseResponse.success("image-ingested", res);
   }
 
