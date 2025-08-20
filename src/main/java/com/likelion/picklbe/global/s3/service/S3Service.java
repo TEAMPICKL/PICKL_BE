@@ -1,24 +1,28 @@
 package com.likelion.picklbe.global.s3.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.likelion.picklbe.global.config.S3Config;
-import com.likelion.picklbe.global.exception.CustomException;
-import com.likelion.picklbe.global.s3.dto.S3Response;
-import com.likelion.picklbe.global.s3.entity.PathName;
-import com.likelion.picklbe.global.s3.exception.S3ErrorCode;
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.likelion.picklbe.global.config.S3Config;
+import com.likelion.picklbe.global.exception.CustomException;
+import com.likelion.picklbe.global.s3.dto.S3Response;
+import com.likelion.picklbe.global.s3.entity.PathName;
+import com.likelion.picklbe.global.s3.exception.S3ErrorCode;
+
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -95,16 +99,16 @@ public class S3Service {
   public String createKeyName(PathName pathName) {
 
     return switch (pathName) {
-      case M01 -> s3Config.getM01Folder();
-      case M02 -> s3Config.getM02Folder();
-      case M03 -> s3Config.getM03Folder();
-      case M04 -> s3Config.getM04Folder();
-      case M05 -> s3Config.getM05Folder();
-      case M06 -> s3Config.getM06Folder();
-      case M07 -> s3Config.getM07Folder();
-      case M08 -> s3Config.getM08Folder();
-      case MARKET -> s3Config.getMARKETFolder();
-    }
+          case M01 -> s3Config.getM01Folder();
+          case M02 -> s3Config.getM02Folder();
+          case M03 -> s3Config.getM03Folder();
+          case M04 -> s3Config.getM04Folder();
+          case M05 -> s3Config.getM05Folder();
+          case M06 -> s3Config.getM06Folder();
+          case M07 -> s3Config.getM07Folder();
+          case M08 -> s3Config.getM08Folder();
+          case MARKET -> s3Config.getMARKETFolder();
+        }
         + '/'
         + UUID.randomUUID();
   }
