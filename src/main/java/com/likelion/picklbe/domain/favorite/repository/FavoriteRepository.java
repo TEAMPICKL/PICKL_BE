@@ -69,7 +69,9 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     Timestamp getLikedAt();
   }
 
-  /** 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑) */
+  /**
+   * 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑)
+   */
   default Page<RecipeCardDto> findRecipeCards(Long userId, FavoriteType type, Pageable pageable) {
     // 방어적으로 타입 확인 (컨트롤러에서 RECIPE로만 호출됨)
     if (type != FavoriteType.RECIPE) {
@@ -126,7 +128,9 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     Timestamp getLikedAt();
   }
 
-  /** 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑) */
+  /**
+   * 컨트롤러 시그니처와 동일한 메서드 (Row -> DTO 매핑)
+   */
   default Page<IngredientCardDto> findIngredientCards(
       Long userId, FavoriteType type, Pageable pageable) {
     if (type != FavoriteType.INGREDIENT) {
