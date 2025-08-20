@@ -6,6 +6,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class MarketMarkerResponse {
+
   private String id;
   private String name;
   private String category;
@@ -13,4 +14,7 @@ public class MarketMarkerResponse {
   private Double lat;
   private Double lng;
   private Boolean parking;
+
+  private String brandCode;
+  private String imageUrl;
 }
