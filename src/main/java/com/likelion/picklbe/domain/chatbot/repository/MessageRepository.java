@@ -8,7 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.likelion.picklbe.domain.chatbot.entity.Message;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
+
   List<Message> findByConversationIdOrderByCreatedAtAsc(Long conversationId);
 
   List<Message> findByConversationIdOrderByCreatedAtDesc(Long conversationId, Pageable pageable);
+
+  void deleteByConversationId(Long conversationId);
 }

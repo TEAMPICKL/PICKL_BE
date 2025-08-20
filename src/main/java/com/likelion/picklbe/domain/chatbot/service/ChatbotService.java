@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -339,14 +340,11 @@ public class ChatbotService {
 
   // ----- 상세 조회 -----
   public ConversationDetailResponse getConversationDetail(Long userId, Long conversationId) {
+    // ⬇️ 소유권을 한 번에 확인 (찾지 못하면 404)
     var conv =
         conversationRepo
-            .findById(conversationId)
+            .findByIdAndUserId(conversationId, userId)
             .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
-
-    if (conv.getUserId() == null || !conv.getUserId().equals(userId)) {
-      throw new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND);
-    }
 
     var msgs = messageRepo.findByConversationIdOrderByCreatedAtAsc(conversationId);
     var items =
@@ -355,5 +353,26 @@ public class ChatbotService {
             .toList();
 
     return new ConversationDetailResponse(conv.getId(), conv.getUserId(), conv.getTitle(), items);
+  }
+
+  /** 대화 삭제 (소유자만 가능) - 메시지 전부 삭제 후 대화 삭제 */
+  @Transactional
+  public void deleteConversation(Long userId, Long conversationId) {
+    // 1) 소유권 검증 + 존재 확인
+    var conv =
+        conversationRepo
+            .findByIdAndUserId(conversationId, userId)
+            .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
+
+    // 2) 진행중 스트리밍이면(희박하지만) 삭제 차단
+    if (inflightConversations.contains(conv.getId())) {
+      throw new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED); // 필요시 별도 에러코드 정의
+    }
+
+    // 3) 메시지 먼저 삭제
+    messageRepo.deleteByConversationId(conv.getId());
+
+    // 4) 대화 삭제
+    conversationRepo.delete(conv);
   }
 }

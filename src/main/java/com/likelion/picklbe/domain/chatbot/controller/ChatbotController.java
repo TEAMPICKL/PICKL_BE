@@ -5,12 +5,13 @@ import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatRequest;
@@ -18,6 +19,7 @@ import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ChatResponse;
 import com.likelion.picklbe.domain.chatbot.dto.ChatDtos.ConversationDetailResponse;
 import com.likelion.picklbe.domain.chatbot.service.ChatbotService;
 import com.likelion.picklbe.global.response.BaseResponse;
+import com.likelion.picklbe.global.security.CustomUserDetails;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,16 +45,13 @@ public class ChatbotController {
       summary = "챗봇 대화(스트리밍)",
       description =
           """
-              **요청 방법**\n
-              채팅 시작 시: conversationId=null로 호출\n
-              동일 대화방 유지: 같은 conversationId로 계속 요청\n
-              userId=1은 고정\n\n
+              **요청 방법**
+              - 채팅 시작: conversationId=null로 호출
+              - 같은 대화 유지: 동일 conversationId로 계속 호출
 
-              **응답 형식**\n
-              text/event-stream MIME 타입\n
-              매 토큰 단위가 ServerSentEvent<String> 객체로 전달됨\n
-              Flux 스트림이 종료될 때까지 클라이언트는 실시간으로 텍스트를 이어받음\n
-
+              **응답 형식**
+              - text/event-stream (SSE)
+              - 매 토큰 단위로 ServerSentEvent<String> 방출
               """)
   @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public Flux<ServerSentEvent<String>> chatStream(@RequestBody @Valid ChatRequest req) {
@@ -61,11 +60,23 @@ public class ChatbotController {
 
   @Operation(
       summary = "대화 상세 조회",
-      description = "대화 ID로 해당 대화의 메시지 목록을 시간 오름차순으로 반환합니다. userId는 본인 대화 검증용으로 필요합니다.")
+      description = "대화 ID로 메시지 목록(시간 오름차순)을 반환합니다. 로그인된 사용자 본인의 대화만 조회됩니다.")
   @GetMapping("/conversations/{conversationId}")
   public ResponseEntity<BaseResponse<ConversationDetailResponse>> getConversation(
-      @PathVariable Long conversationId, @RequestParam Long userId) {
-    var res = service.getConversationDetail(userId, conversationId);
+      @PathVariable Long conversationId,
+      @AuthenticationPrincipal CustomUserDetails me // ⬅️ 토큰에서 사용자 추출
+      ) {
+    var res = service.getConversationDetail(me.getId(), conversationId);
     return ResponseEntity.ok(BaseResponse.success("ok", res));
+  }
+
+  @Operation(summary = "대화 삭제", description = "conversationId로 해당 대화를 삭제합니다. (본인 대화만 가능)")
+  @DeleteMapping("/conversations/{conversationId}")
+  public ResponseEntity<BaseResponse<Void>> deleteConversation(
+      @PathVariable Long conversationId, @AuthenticationPrincipal CustomUserDetails me) {
+    service.deleteConversation(me.getId(), conversationId);
+    return ResponseEntity.ok(BaseResponse.success("대화가 삭제되었습니다.", null));
+    // 필요하면 204 No Content로:
+    // return ResponseEntity.noContent().build();
   }
 }
