@@ -71,7 +71,7 @@ public enum Brand {
 
   private final String code;
   private final String displayName;
-  private final String filename; // brands/ 아래 파일명
+  private final String filename;
   private final List<Pattern> patterns;
 
   Brand(String code, String displayName, String filename, List<Pattern> patterns) {
