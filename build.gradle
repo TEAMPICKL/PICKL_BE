@@ -49,6 +49,20 @@ dependencies {
     implementation "io.github.resilience4j:resilience4j-ratelimiter:2.2.0"
     implementation "io.github.resilience4j:resilience4j-bulkhead:2.2.0"
 
+    // Geometry
+    implementation "org.locationtech.jts:jts-core:1.19.0"
+    implementation "org.hibernate.orm:hibernate-spatial:6.6.22.Final"
+
+    // csv 정제
+    implementation "org.springframework.boot:spring-boot-starter-webflux" // WebClient
+    implementation "org.apache.commons:commons-csv:1.11.0"
+    implementation "org.slf4j:slf4j-api:2.0.13"
+    implementation "com.jayway.jsonpath:json-path:2.9.0"
+
+    // 원본 좌표 코드
+    implementation "org.locationtech.proj4j:proj4j:1.3.0"
+    implementation "org.locationtech.proj4j:proj4j-epsg:1.3.0"
+
     // ==== Lombok ====
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -124,4 +138,13 @@ test {
         def profile = project.hasProperty('profile') ? project.property('profile').toString() : 'local'
         jvmArgs = ["-Dspring.profiles.active=${profile}"]
     }
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs += ["-Dfile.encoding=UTF-8"]
+}
+
+tasks.named('bootRun') {
+    args '--spring.profiles.active=local'
+    systemProperty 'spring.config.additional-location', "file:${projectDir}/PICKL_BE_Config/"
 }
