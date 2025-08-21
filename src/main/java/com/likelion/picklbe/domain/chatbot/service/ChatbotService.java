@@ -34,6 +34,7 @@ import com.likelion.picklbe.domain.chatbot.exception.ChatbotErrorCode;
 import com.likelion.picklbe.domain.chatbot.repository.ConversationRepository;
 import com.likelion.picklbe.domain.chatbot.repository.MessageRepository;
 import com.likelion.picklbe.domain.chatbot.repository.UserMemoryRepository;
+import com.likelion.picklbe.domain.chatbot.util.TextPostProcessor;
 import com.likelion.picklbe.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -174,15 +175,17 @@ public class ChatbotService {
       throw new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED);
     }
 
+    String pretty = TextPostProcessor.prettyWeeklyPlan(res.reply());
+
     // AI 답변 저장
     messageRepo.save(
         Message.builder()
             .conversationId(conv.getId())
             .role(MessageRole.ASSISTANT)
-            .content(res.reply())
+            .content(pretty)
             .build());
     conversationRepo.touchModifiedAt(conv.getId());
-    return new ChatResponse(conv.getId(), res.reply());
+    return new ChatResponse(conv.getId(), pretty);
   }
 
   // ----- 스트리밍 (SSE) -----
@@ -306,11 +309,14 @@ public class ChatbotService {
                     System.out.println(
                         "[SSE-DOWN][finally] signal=" + sig + " len=" + full.length());
                     if (!full.isBlank()) {
+
+                      String pretty = TextPostProcessor.prettyWeeklyPlan(full);
+
                       messageRepo.save(
                           Message.builder()
                               .conversationId(conv.getId())
                               .role(MessageRole.ASSISTANT)
-                              .content(full)
+                              .content(pretty)
                               .build());
                       conversationRepo.touchModifiedAt(conv.getId());
                     }
