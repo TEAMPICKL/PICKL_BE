@@ -6,29 +6,55 @@ import org.springframework.stereotype.Component;
 @Component
 public class BrandImageResolver {
 
-  @Value("${cloud.aws.s3.bucket}")
-  private String bucket;
+  @Value("${app.cdn.base-url:https://picklocal.s3.ap-northeast-2.amazonaws.com}")
+  private String baseUrl;
 
-  @Value("${cloud.aws.region.static}")
-  private String region;
-
-  @Value("${cloud.aws.s3.path.market:images/market}")
-  private String marketPath;
+  @Value("${app.cdn.brand-path:brands}")
+  private String brandPath;
 
   @Value("${app.cdn.default-file:mart_default.png}")
   private String defaultFile;
 
-  private String baseUrl() {
-    return String.format("https://%s.s3.%s.amazonaws.com", bucket, region);
+  /** 원문(지점명/상호명/브랜드명 포함 가능)에서 Brand enum을 추정 */
+  public Brand resolveBrand(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return Brand.DEFAULT;
+    }
+    return Brand.fromStoreName(raw);
   }
 
-  public String resolveBrandCode(String storeName) {
-    return Brand.fromStoreName(storeName).code();
+  /** Brand 코드만 필요할 때 */
+  public String resolveBrandCode(String raw) {
+    return resolveBrand(raw).code();
   }
 
-  public String resolveImageUrl(String storeName) {
-    Brand b = Brand.fromStoreName(storeName);
-    String filename = (b == Brand.DEFAULT || b.filename() == null) ? defaultFile : b.filename();
-    return String.format("%s/%s/%s", baseUrl(), marketPath, filename);
+  /** 원문에서 바로 대표 이미지 URL */
+  public String resolveImageUrl(String raw) {
+    return imageUrlFor(resolveBrand(raw));
   }
+
+  /** Brand가 이미 있는 경우 이미지 URL */
+  public String imageUrlFor(Brand brand) {
+    String filename =
+        (brand == null || brand == Brand.DEFAULT || brand.filename() == null)
+            ? defaultFile
+            : brand.filename();
+    return String.format("%s/%s/%s", rtrim(baseUrl), rtrim(brandPath), filename);
+  }
+
+  /** 원문에서 Brand와 이미지 URL을 한 번에 */
+  public ResolvedBrand resolve(String raw) {
+    Brand b = resolveBrand(raw);
+    return new ResolvedBrand(b, imageUrlFor(b), b.code());
+  }
+
+  private String rtrim(String s) {
+    if (s == null || s.isBlank()) {
+      return "";
+    }
+    return s.replaceAll("/+$", "");
+  }
+
+  /** 편의 반환 DTO */
+  public record ResolvedBrand(Brand brand, String imageUrl, String code) {}
 }

@@ -1,87 +1,67 @@
 package com.likelion.picklbe.domain.mart.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.likelion.picklbe.domain.brand.BrandImageResolver;
-import com.likelion.picklbe.domain.marketplace.dto.response.MarketMarkerResponse;
-import com.likelion.picklbe.global.api.mart.client.KakaoLocalClient;
-import com.likelion.picklbe.global.api.mart.dto.KakaoCategoryResponse;
+import com.likelion.picklbe.domain.mart.dto.PlaceResponse;
+import com.likelion.picklbe.domain.mart.entity.Place;
+import com.likelion.picklbe.domain.mart.repository.PlaceRepository;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MartQueryService {
 
-  private final KakaoLocalClient kakao;
-  private final BrandImageResolver brandImageResolver; // 주입 유지
+  private final PlaceRepository placeRepository;
+  private final BrandImageResolver brandImageResolver;
 
-  public List<MarketMarkerResponse> getMarts(
-      double minX, double minY, double maxX, double maxY, Integer page, Integer size) {
+  /** 브랜드명이 없으면 지점명(name)으로 키를 만들어 이미지/브랜드코드 모두 해석 */
+  private BrandInfo resolveBrandInfo(Place p) {
+    String key = (p.getBrand() != null && !p.getBrand().isBlank()) ? p.getBrand() : p.getName();
+    String img = brandImageResolver.resolveImageUrl(key);
+    String code = brandImageResolver.resolveBrandCode(key);
+    return new BrandInfo(img, code);
+  }
 
-    int p = (page == null || page < 1) ? 1 : page;
-    int s = (size == null || size < 1 || size > 15) ? 15 : size;
+  @Transactional(readOnly = true)
+  public List<PlaceResponse> findInBounds(
+      double westLng,
+      double southLat,
+      double eastLng,
+      double northLat,
+      double centerLng,
+      double centerLat,
+      int limit) {
 
-    KakaoCategoryResponse resp = kakao.searchMartsByRect(minX, minY, maxX, maxY, p, s);
-
-    if (resp == null || resp.getDocuments() == null) {
-      log.warn(
-          "[MART] Upstream returned null/empty documents (rect={},{}~{},{} p={} s={})",
-          minX,
-          minY,
-          maxX,
-          maxY,
-          p,
-          s);
-      return List.of();
-    }
-
-    var meta = resp.getMeta();
-    if (meta != null) {
-      log.info(
-          "[MART] meta: isEnd={} totalCount={} pageableCount={}",
-          meta.isEnd(),
-          meta.getTotalCount(),
-          meta.getPageableCount());
-    }
-
-    return resp.getDocuments().stream()
+    return placeRepository
+        .findMartsInBounds(westLng, southLat, eastLng, northLat, centerLng, centerLat, limit)
+        .stream()
         .map(
-            d -> {
-              String name = d.getPlaceName();
-              return MarketMarkerResponse.builder()
-                  .id(d.getId())
-                  .name(name)
-                  .category("대형마트")
-                  .address(first(d.getRoadAddressName(), d.getAddressName()))
-                  .lng(parse(d.getX()))
-                  .lat(parse(d.getY()))
-                  .parking(null)
-                  .brandCode(brandImageResolver.resolveBrandCode(name))
-                  .imageUrl(brandImageResolver.resolveImageUrl(name))
-                  .build();
+            p -> {
+              BrandInfo brand = resolveBrandInfo(p);
+              // PlaceResponse.of(Place, imageUrl, brandCode) 시그니처 사용
+              return PlaceResponse.of(p, brand.imageUrl(), brand.brandCode());
             })
-        .toList();
+        .collect(Collectors.toList());
   }
 
-  private static String first(String... arr) {
-    for (String s : arr) {
-      if (s != null && !s.isBlank()) {
-        return s;
-      }
-    }
-    return null;
+  @Transactional(readOnly = true)
+  public List<PlaceResponse> findNearby(double lng, double lat, int radiusMeters, int limit) {
+    return placeRepository.findMartsNearby(lng, lat, radiusMeters, limit).stream()
+        .map(
+            p -> {
+              BrandInfo brand = resolveBrandInfo(p);
+              // PlaceResponse.of(Place, imageUrl, brandCode) 시그니처 사용
+              return PlaceResponse.of(p, brand.imageUrl(), brand.brandCode());
+            })
+        .collect(Collectors.toList());
   }
 
-  private static Double parse(String v) {
-    try {
-      return v == null ? null : Double.valueOf(v);
-    } catch (Exception e) {
-      return null;
-    }
-  }
+  /** 내부 전용 DTO (Java 16+): 이미지 URL과 브랜드 코드 한 번에 전달 */
+  private record BrandInfo(String imageUrl, String brandCode) {}
 }
