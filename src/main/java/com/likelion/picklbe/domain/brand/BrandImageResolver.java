@@ -6,15 +6,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class BrandImageResolver {
 
-  // 프로퍼티가 없으면 기본값으로 동작
-  @Value("${app.cdn.base-url:https://picklocal.s3.ap-northeast-2.amazonaws.com}")
-  private String baseUrl;
+  @Value("${cloud.aws.s3.bucket}")
+  private String bucket;
 
-  @Value("${app.cdn.brand-path:brands}")
-  private String brandPath;
+  @Value("${cloud.aws.region.static}")
+  private String region;
+
+  @Value("${cloud.aws.s3.path.market:images/market}")
+  private String marketPath;
 
   @Value("${app.cdn.default-file:mart_default.png}")
   private String defaultFile;
+
+  private String baseUrl() {
+    return String.format("https://%s.s3.%s.amazonaws.com", bucket, region);
+  }
 
   public String resolveBrandCode(String storeName) {
     return Brand.fromStoreName(storeName).code();
@@ -23,14 +29,6 @@ public class BrandImageResolver {
   public String resolveImageUrl(String storeName) {
     Brand b = Brand.fromStoreName(storeName);
     String filename = (b == Brand.DEFAULT || b.filename() == null) ? defaultFile : b.filename();
-    // base-url/brand-path/filename (중복 슬래시 방지)
-    return String.format("%s/%s/%s", rtrim(baseUrl), rtrim(brandPath), filename);
-  }
-
-  private String rtrim(String s) {
-    if (s == null || s.isBlank()) {
-      return "";
-    }
-    return s.replaceAll("/+$", "");
+    return String.format("%s/%s/%s", baseUrl(), marketPath, filename);
   }
 }
