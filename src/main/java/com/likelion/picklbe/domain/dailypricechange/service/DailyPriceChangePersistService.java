@@ -174,7 +174,13 @@ public class DailyPriceChangePersistService {
 
   @Transactional(readOnly = true)
   public List<ItemDailyPriceChangeResponse> findByProductNo(
-      LocalDate date, String clsOpt, String productNo) {
+      LocalDate dateOrNull, String clsOpt, String productNo) {
+
+    LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
+    if (date == null) {
+      return List.of();
+    }
+
     List<KamisItemPrice> rows =
         (clsOpt == null || clsOpt.isBlank())
             ? itemRepo.findByPriceDateAndProductNo(date, productNo)

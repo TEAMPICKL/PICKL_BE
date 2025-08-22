@@ -142,15 +142,29 @@ public class DailyPriceStoreController {
     return BaseResponse.success("ok", service.searchByName(date, market, keyword));
   }
 
-  @GetMapping("/items/{id}")
-  @Operation(summary = "PICK - ID로 단일 품목 조회", description = "kamis_item_price의 PK(ID)로 단건 조회")
-  public BaseResponse<ItemDailyPriceChangeResponse> getItemById(
-      @Parameter(description = "품목 PK", example = "12345") @PathVariable Long id) {
-
-    return service
-        .getItemById(id)
-        .map(r -> BaseResponse.success("ok", r))
-        .orElseGet(() -> BaseResponse.success("not-found", null));
+  @GetMapping("/items/{productNo}")
+  @Operation(
+      summary = "PICK - productNo로 단일 품목 조회",
+      description = "kamis_item_price의 productNo로 단건 조회 (응답에는 id 포함됨)")
+  public BaseResponse<ItemDailyPriceChangeResponse> getItemByProductNo(
+      @Parameter(description = "품목 productNo", example = "940") @PathVariable String productNo,
+      @Parameter(description = "조회 날짜(생략 시 최신 수집일)")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate date,
+      @Parameter(
+              description = "시장 구분",
+              examples = {
+                @ExampleObject(name = "Retail", value = "소매"),
+                @ExampleObject(name = "Wholesale", value = "도매")
+              })
+          @RequestParam(name = "market", required = false)
+          String market) {
+    var list = service.findByProductNo(date, market, productNo);
+    if (list == null || list.isEmpty()) {
+      return BaseResponse.success("not-found", null);
+    }
+    return BaseResponse.success("ok", list.get(0));
   }
 
   @GetMapping("/raw/latest")
