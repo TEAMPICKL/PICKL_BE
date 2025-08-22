@@ -15,4 +15,10 @@ public interface KamisCategorySummaryRepository extends JpaRepository<KamisCateg
 
   List<KamisCategorySummary> findByPriceDateAndProductClsName(
       LocalDate priceDate, String productClsName);
+
+  List<KamisCategorySummary> findByPriceDateAndCategoryCode(
+      LocalDate priceDate, String categoryCode);
+
+  List<KamisCategorySummary> findByPriceDateAndProductClsNameAndCategoryCode(
+      LocalDate priceDate, String productClsName, String categoryCode);
 }

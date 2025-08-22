@@ -291,16 +291,30 @@ public class DailyPriceChangePersistService {
 
   @Transactional(readOnly = true)
   public List<CategoryDailyPriceChangeResponse> getStoredCategories(
-      LocalDate dateOrNull, String clsOpt) {
+      LocalDate dateOrNull, String clsOpt, String categoryCodeOpt) {
+
     LocalDate date = (dateOrNull != null) ? dateOrNull : itemRepo.findLatestPriceDate();
     if (date == null) {
       return List.of();
     }
 
-    List<KamisCategorySummary> rows =
-        (clsOpt == null || clsOpt.isBlank())
-            ? catRepo.findByPriceDate(date)
-            : catRepo.findByPriceDateAndProductClsName(date, clsOpt);
+    List<KamisCategorySummary> rows;
+    if (clsOpt != null
+        && !clsOpt.isBlank()
+        && categoryCodeOpt != null
+        && !categoryCodeOpt.isBlank()) {
+      // 시장 + 카테고리코드
+      rows = catRepo.findByPriceDateAndProductClsNameAndCategoryCode(date, clsOpt, categoryCodeOpt);
+    } else if (clsOpt != null && !clsOpt.isBlank()) {
+      // 시장만
+      rows = catRepo.findByPriceDateAndProductClsName(date, clsOpt);
+    } else if (categoryCodeOpt != null && !categoryCodeOpt.isBlank()) {
+      // 카테고리코드만
+      rows = catRepo.findByPriceDateAndCategoryCode(date, categoryCodeOpt);
+    } else {
+      // 전체
+      rows = catRepo.findByPriceDate(date);
+    }
 
     return rows.stream()
         .map(

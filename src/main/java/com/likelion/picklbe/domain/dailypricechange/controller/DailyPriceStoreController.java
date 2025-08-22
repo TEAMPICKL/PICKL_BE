@@ -92,7 +92,8 @@ public class DailyPriceStoreController {
   @GetMapping("/category")
   @Operation(
       summary = "메인화면/ 식세평균 - 저장된 카테고리 평균 조회",
-      description = "date=YYYY-MM-DD(옵션), market=소매|도매(옵션). date 생략 시 최신 수집일 사용")
+      description =
+          "date=YYYY-MM-DD(옵션), market=소매|도매(옵션), categoryCode=카테고리코드(옵션). date 생략 시 최신 수집일 사용")
   public BaseResponse<List<CategoryDailyPriceChangeResponse>> category(
       @Parameter(description = "조회 날짜(생략 시 최신 수집일)")
           @RequestParam(required = false)
@@ -106,9 +107,11 @@ public class DailyPriceStoreController {
                 @ExampleObject(name = "Wholesale", value = "도매")
               })
           @RequestParam(name = "market", required = false)
-          String market) {
-
-    return BaseResponse.success("ok", service.getStoredCategories(date, market));
+          String market,
+      @Parameter(description = "카테고리 코드(예: 200, 400)", example = "400")
+          @RequestParam(name = "categoryCode", required = false)
+          String categoryCode) {
+    return BaseResponse.success("ok", service.getStoredCategories(date, market, categoryCode));
   }
 
   @GetMapping("/items/search")
