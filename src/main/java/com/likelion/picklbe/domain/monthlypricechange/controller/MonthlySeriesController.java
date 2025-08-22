@@ -79,17 +79,18 @@ public class MonthlySeriesController {
   @GetMapping("/series/category/table")
   @Operation(summary = "그래프 - 월별 카테고리별 시계열(피벗형) 조회", description = "메타 필드가 먼저, yyyymm 값이 이어지는 형태")
   public Object getCategorySeriesTable(
-      @RequestParam(name = "market", required = false) String market,
-      @RequestParam(name = "category", required = false) String category) {
-    if ((market == null || market.isBlank()) && (category == null || category.isBlank())) {
+      @RequestParam(name = "market", required = true) String market,
+      @RequestParam(name = "categoryCode", required = true) String categoryCode) {
+
+    if ((market == null || market.isBlank()) && (categoryCode == null || categoryCode.isBlank())) {
       List<Map<String, Object>> rows = seriesService.getCategorySeriesTable(null);
       return rows;
     }
-    if (category == null || category.isBlank()) {
+    if (categoryCode == null || categoryCode.isBlank()) {
       List<Map<String, Object>> rows = seriesService.getCategorySeriesTable(market);
       return rows;
     }
-    Map<String, Object> row = seriesService.getCategorySeriesTableOne(market, category);
+    Map<String, Object> row = seriesService.getCategorySeriesTableOne(market, categoryCode);
     return row;
   }
 }

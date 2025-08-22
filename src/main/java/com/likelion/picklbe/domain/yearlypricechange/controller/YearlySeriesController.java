@@ -72,21 +72,21 @@ public class YearlySeriesController {
   @GetMapping("/series/category/table")
   @Operation(summary = "그래프 - 연도별 카테고리별 소매, 도매 가격 조회", description = "5년치 카테고리별 소매, 도매 가격 조회")
   public Object getCategorySeriesTable(
-      @RequestParam(name = "market", required = false) String market,
-      @RequestParam(name = "category", required = false) String category) {
+      @RequestParam(name = "market", required = true) String market,
+      @RequestParam(name = "categoryCode", required = true) String categoryCode) {
 
     // 둘 다 없으면: 소매/도매 × 100~600 전부를 "행 배열"로
-    if ((market == null || market.isBlank()) && (category == null || category.isBlank())) {
+    if ((market == null || market.isBlank()) && (categoryCode == null || categoryCode.isBlank())) {
       List<Map<String, Object>> rows = seriesService.getCategorySeriesTable(null);
       return rows; // 메타 → 연도 순서 유지 (LinkedHashMap)
     }
     // market만 있으면: 그 시장의 모든 카테고리 행 배열
-    if (category == null || category.isBlank()) {
+    if (categoryCode == null || categoryCode.isBlank()) {
       List<Map<String, Object>> rows = seriesService.getCategorySeriesTable(market);
       return rows;
     }
-    // market + category가 모두 있으면: 한 줄만
-    Map<String, Object> row = seriesService.getCategorySeriesTableOne(market, category);
+    // market + categoryCode가 모두 있으면: 한 줄만
+    Map<String, Object> row = seriesService.getCategorySeriesTableOne(market, categoryCode);
     return row;
   }
 }
