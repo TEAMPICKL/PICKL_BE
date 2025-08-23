@@ -89,7 +89,7 @@ public enum Brand {
     return filename;
   }
 
-  public String displayName() { // getter
+  public String displayName() {
     return displayName;
   }
 
@@ -97,7 +97,6 @@ public enum Brand {
     if (name == null || name.isBlank()) {
       return DEFAULT;
     }
-    // 우선순위: 에브리데이 → 이마트 등 (선언 순서 유지)
     for (Brand b : values()) {
       if (b == DEFAULT) {
         continue;
@@ -110,4 +109,17 @@ public enum Brand {
     }
     return DEFAULT;
   }
+
+  public static Brand fromCodeSafe(String code) {
+    if (code == null || code.isBlank()) {
+      return DEFAULT;
+    }
+    for (Brand b : values()) {
+      if (b.code.equalsIgnoreCase(code)) {
+        return b;
+      }
+    }
+    return DEFAULT;
+  }
 }
+
