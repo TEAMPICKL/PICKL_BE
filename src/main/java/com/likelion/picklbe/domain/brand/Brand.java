@@ -122,4 +122,3 @@ public enum Brand {
     return DEFAULT;
   }
 }
-
