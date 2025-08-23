@@ -33,8 +33,7 @@ public class S3Controller {
   @Operation(summary = "이미지 업로드 API", description = "이미지를 업로드하고 URL을 리턴받는 API")
   @PostMapping(value = "/image-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<BaseResponse<S3Response>> uploadImage(
-      @RequestParam PathName pathName, MultipartFile file
-  ) {
+      @RequestParam PathName pathName, MultipartFile file) {
 
     S3Response s3Response = s3Service.uploadImage(pathName, file);
     return ResponseEntity.ok(BaseResponse.success("이미지 업로드에 성공했습니다.", s3Response));

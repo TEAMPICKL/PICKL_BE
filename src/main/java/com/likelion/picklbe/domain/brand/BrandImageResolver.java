@@ -17,9 +17,7 @@ public class BrandImageResolver {
   @Value("${app.cdn.default-file:mart_default.png}")
   private String defaultFile;
 
-  /**
-   * 원문(지점명/상호명/브랜드명 포함 가능)에서 Brand enum을 추정
-   */
+  /** 원문(지점명/상호명/브랜드명 포함 가능)에서 Brand enum을 추정 */
   public Brand resolveBrand(String raw) {
     if (!StringUtils.hasText(raw)) {
       return Brand.DEFAULT;
@@ -27,9 +25,7 @@ public class BrandImageResolver {
     return Brand.fromStoreName(raw);
   }
 
-  /**
-   * explicitBrand(컬럼) 우선, 없으면 name(지점명)으로 추정
-   */
+  /** explicitBrand(컬럼) 우선, 없으면 name(지점명)으로 추정 */
   public Brand resolveBrand(String explicitBrand, String name) {
     if (StringUtils.hasText(explicitBrand)) {
       // fromStoreName 가 브랜드명도 파싱한다는 전제
@@ -38,38 +34,28 @@ public class BrandImageResolver {
     return resolveBrand(name);
   }
 
-  /**
-   * Brand 코드만 필요할 때
-   */
+  /** Brand 코드만 필요할 때 */
   public String resolveBrandCode(String raw) {
     return resolveBrand(raw).code();
   }
 
-  /**
-   * Brand 코드만 이미 있는 경우(예: DB 조회)
-   */
+  /** Brand 코드만 이미 있는 경우(예: DB 조회) */
   public String resolveBrandCodeFromCode(String brandCode) {
     Brand b = Brand.fromCodeSafe(brandCode); // 없으면 DEFAULT 반환하도록 enum에 구현되어 있어야 함
     return b.code();
   }
 
-  /**
-   * 원문에서 바로 대표 이미지 URL
-   */
+  /** 원문에서 바로 대표 이미지 URL */
   public String resolveImageUrl(String raw) {
     return imageUrlFor(resolveBrand(raw));
   }
 
-  /**
-   * explicitBrand + name 동시 고려
-   */
+  /** explicitBrand + name 동시 고려 */
   public String resolveImageUrl(String explicitBrand, String name) {
     return imageUrlFor(resolveBrand(explicitBrand, name));
   }
 
-  /**
-   * Brand가 이미 있는 경우 이미지 URL
-   */
+  /** Brand가 이미 있는 경우 이미지 URL */
   public String imageUrlFor(Brand brand) {
     // 1) brand가 null/DEFAULT 이거나 파일명이 비어있으면 기본 이미지
     String filename =
@@ -86,25 +72,19 @@ public class BrandImageResolver {
     return joinUrl(rtrimSlashes(baseUrl), rtrimSlashes(brandPath), filename);
   }
 
-  /**
-   * Brand 코드로 바로 이미지 URL (코드만 내려받는 API/쿼리 대응)
-   */
+  /** Brand 코드로 바로 이미지 URL (코드만 내려받는 API/쿼리 대응) */
   public String imageUrlForCode(String brandCode) {
     Brand b = Brand.fromCodeSafe(brandCode);
     return imageUrlFor(b);
   }
 
-  /**
-   * 원문에서 Brand와 이미지 URL/코드를 한 번에
-   */
+  /** 원문에서 Brand와 이미지 URL/코드를 한 번에 */
   public ResolvedBrand resolve(String raw) {
     Brand b = resolveBrand(raw);
     return new ResolvedBrand(b, imageUrlFor(b), b.code());
   }
 
-  /**
-   * explicitBrand + name 동시 입력 버전
-   */
+  /** explicitBrand + name 동시 입력 버전 */
   public ResolvedBrand resolve(String explicitBrand, String name) {
     Brand b = resolveBrand(explicitBrand, name);
     return new ResolvedBrand(b, imageUrlFor(b), b.code());
@@ -142,11 +122,6 @@ public class BrandImageResolver {
     return sb.toString();
   }
 
-  /**
-   * 편의 반환 DTO
-   */
-  public record ResolvedBrand(Brand brand, String imageUrl, String code) {
-
-  }
+  /** 편의 반환 DTO */
+  public record ResolvedBrand(Brand brand, String imageUrl, String code) {}
 }
-
