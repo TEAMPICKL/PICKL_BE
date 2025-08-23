@@ -67,6 +67,21 @@ public enum Brand {
           Pattern.compile("(농협|하나로)\\s*마트"),
           Pattern.compile("하나로클럽"),
           Pattern.compile("hanaro", Pattern.CASE_INSENSITIVE))),
+  GS_SUPER(
+      "gs-super",
+      "GS수퍼마켓",
+      "gs_super.png",
+      List.of(
+          Pattern.compile("지에스\\s*리테일"),
+          Pattern.compile("\\bGS\\s*수퍼", Pattern.CASE_INSENSITIVE),
+          Pattern.compile("\\bGS\\s*super", Pattern.CASE_INSENSITIVE))),
+  GS_THE_FRESH(
+      "gs-the-fresh",
+      "GS더프레시",
+      "gs_the_fresh.png",
+      List.of(
+          Pattern.compile("더\\s*프레시"),
+          Pattern.compile("\\bGS\\s*the\\s*fresh", Pattern.CASE_INSENSITIVE))),
   DEFAULT("default", "기타", null, List.of());
 
   private final String code;
