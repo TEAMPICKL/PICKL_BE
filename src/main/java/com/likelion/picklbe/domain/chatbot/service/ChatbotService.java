@@ -119,17 +119,18 @@ public class ChatbotService {
   }
 
   // ----- 완성본 JSON 응답 -----
-  public ChatResponse chat(ChatRequest req) {
-    if (req == null || req.userId() == null || req.message() == null || req.message().isBlank()) {
+  public ChatResponse chat(ChatRequest req, Long meId, String authHeader) {
+    if (req == null || req.message() == null || req.message().isBlank()) {
       throw new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED);
     }
 
     boolean isNew = (req.conversationId() == null);
     Conversation conv =
         isNew
-            ? conversationRepo.save(Conversation.builder().userId(req.userId()).title("대화").build())
+            ? conversationRepo.save(Conversation.builder().userId(meId).title("대화").build())
+            // ★ meId
             : conversationRepo
-                .findByIdAndUserId(req.conversationId(), req.userId())
+                .findByIdAndUserId(req.conversationId(), meId) // ★ meId
                 .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
 
     // 유저 발화 저장
@@ -141,10 +142,10 @@ public class ChatbotService {
             .build());
     conversationRepo.touchModifiedAt(conv.getId());
     if (isNew) {
-      tryUpdateSmartTitleAsync(req.message(), req.userId(), conv);
+      tryUpdateSmartTitleAsync(req.message(), meId, conv); // ★ meId
     }
 
-    String memory = buildMemoryBlock(req.userId());
+    String memory = buildMemoryBlock(meId); // ★ meId
     List<Turn> turns = buildTurns(conv.getId());
 
     ChatRes res;
@@ -154,6 +155,7 @@ public class ChatbotService {
               .post()
               .uri("/chat/history")
               .contentType(MediaType.APPLICATION_JSON)
+              .header(HttpHeaders.AUTHORIZATION, authHeader) // ★ 전달
               .bodyValue(new HistoryReq(turns, memory))
               .retrieve()
               .onStatus(
@@ -189,15 +191,15 @@ public class ChatbotService {
   }
 
   // ----- 스트리밍 (SSE) -----
-  public Flux<ServerSentEvent<String>> chatStream(ChatRequest req) {
-    if (req == null || req.userId() == null || req.message() == null || req.message().isBlank()) {
+  public Flux<ServerSentEvent<String>> chatStream(ChatRequest req, Long meId, String authHeader) {
+    if (req == null || req.message() == null || req.message().isBlank()) {
       return Flux.error(new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED));
     }
 
     final boolean isNewRequest = (req.conversationId() == null);
 
     if (isNewRequest) {
-      boolean ok = inflightNewConvByUser.add(req.userId());
+      boolean ok = inflightNewConvByUser.add(meId); // ★ meId
       if (!ok) {
         return Flux.just(
             ServerSentEvent.<String>builder("already-streaming").event("busy").build());
@@ -209,20 +211,20 @@ public class ChatbotService {
       conv =
           isNewRequest
               ? conversationRepo.save(
-                  Conversation.builder().userId(req.userId()).title("대화").build())
+                  Conversation.builder().userId(meId).title("대화").build()) // ★ meId
               : conversationRepo
-                  .findByIdAndUserId(req.conversationId(), req.userId())
+                  .findByIdAndUserId(req.conversationId(), meId) // ★ meId
                   .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
     } catch (RuntimeException e) {
       if (isNewRequest) {
-        inflightNewConvByUser.remove(req.userId());
+        inflightNewConvByUser.remove(meId); // ★ meId
       }
       throw e;
     }
 
     if (!inflightConversations.add(conv.getId())) {
       if (isNewRequest) {
-        inflightNewConvByUser.remove(req.userId());
+        inflightNewConvByUser.remove(meId); // ★ meId
       }
       return Flux.just(ServerSentEvent.<String>builder("already-streaming").event("busy").build());
     }
@@ -235,11 +237,11 @@ public class ChatbotService {
             .build());
     conversationRepo.touchModifiedAt(conv.getId());
     if (isNewRequest) {
-      tryUpdateSmartTitleAsync(req.message(), req.userId(), conv);
+      tryUpdateSmartTitleAsync(req.message(), meId, conv); // ★ meId
     }
 
     List<Turn> turns = buildTurns(conv.getId());
-    var payload = new HistoryReq(turns, buildMemoryBlock(req.userId()));
+    var payload = new HistoryReq(turns, buildMemoryBlock(meId)); // ★ meId
 
     // 첫 이벤트: conversationId
     Flux<ServerSentEvent<String>> first =
@@ -256,6 +258,7 @@ public class ChatbotService {
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.TEXT_EVENT_STREAM)
             .header(HttpHeaders.ACCEPT_ENCODING, "identity")
+            .header(HttpHeaders.AUTHORIZATION, authHeader) // ★ 전달
             .bodyValue(payload)
             .retrieve()
             .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
@@ -274,10 +277,10 @@ public class ChatbotService {
 
     // done에서 즉시 완료, data만 토큰으로 방출
     Flux<String> upstream =
-        raw.takeUntil(evt -> "done".equals(evt.event())) // done 이벤트가 오면 그 시점에 완료
-            .filter(evt -> evt != null && evt.data() != null) // 👈 NPE 방지: data==null 프레임 제거
-            .map(ServerSentEvent::data) // 이제 null 아님
-            .filter(s -> !s.isBlank()) // 공백 토큰 제거
+        raw.takeUntil(evt -> "done".equals(evt.event()))
+            .filter(evt -> evt != null && evt.data() != null)
+            .map(ServerSentEvent::data)
+            .filter(s -> !s.isBlank())
             .doOnNext(tok -> System.out.println("[SSE-UP][token] \"" + tok + "\""))
             .onErrorResume(
                 t -> {
@@ -309,9 +312,7 @@ public class ChatbotService {
                     System.out.println(
                         "[SSE-DOWN][finally] signal=" + sig + " len=" + full.length());
                     if (!full.isBlank()) {
-
                       String pretty = TextPostProcessor.prettyWeeklyPlan(full);
-
                       messageRepo.save(
                           Message.builder()
                               .conversationId(conv.getId())
@@ -323,7 +324,7 @@ public class ChatbotService {
                   } finally {
                     inflightConversations.remove(conv.getId());
                     if (isNewRequest) {
-                      inflightNewConvByUser.remove(req.userId());
+                      inflightNewConvByUser.remove(meId); // ★ meId
                     }
                   }
                 })
@@ -353,7 +354,6 @@ public class ChatbotService {
 
   // ----- 상세 조회 -----
   public ConversationDetailResponse getConversationDetail(Long userId, Long conversationId) {
-    // ⬇️ 소유권을 한 번에 확인 (찾지 못하면 404)
     var conv =
         conversationRepo
             .findByIdAndUserId(conversationId, userId)
@@ -371,21 +371,16 @@ public class ChatbotService {
   /** 대화 삭제 (소유자만 가능) - 메시지 전부 삭제 후 대화 삭제 */
   @Transactional
   public void deleteConversation(Long userId, Long conversationId) {
-    // 1) 소유권 검증 + 존재 확인
     var conv =
         conversationRepo
             .findByIdAndUserId(conversationId, userId)
             .orElseThrow(() -> new CustomException(ChatbotErrorCode.CONVERSATION_NOT_FOUND));
 
-    // 2) 진행중 스트리밍이면(희박하지만) 삭제 차단
     if (inflightConversations.contains(conv.getId())) {
-      throw new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED); // 필요시 별도 에러코드 정의
+      throw new CustomException(ChatbotErrorCode.CHATBOT_REQUEST_FAILED);
     }
 
-    // 3) 메시지 먼저 삭제
     messageRepo.deleteByConversationId(conv.getId());
-
-    // 4) 대화 삭제
     conversationRepo.delete(conv);
   }
 

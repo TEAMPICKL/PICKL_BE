@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,8 +41,11 @@ public class ChatbotController {
 
   @Operation(summary = "챗봇 대화(사용 x)", description = "첫 턴은 conversationId=null 로 호출합니다.")
   @PostMapping("/chat/")
-  public ResponseEntity<BaseResponse<ChatResponse>> chat(@RequestBody @Valid ChatRequest req) {
-    ChatResponse res = service.chat(req);
+  public ResponseEntity<BaseResponse<ChatResponse>> chat(
+      @RequestBody @Valid ChatRequest req,
+      @AuthenticationPrincipal CustomUserDetails me,
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+    ChatResponse res = service.chat(req, me.getId(), authHeader);
     return ResponseEntity.ok(BaseResponse.success("ok", res));
   }
 
@@ -57,8 +62,11 @@ public class ChatbotController {
               - 매 토큰 단위로 ServerSentEvent<String> 방출
               """)
   @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  public Flux<ServerSentEvent<String>> chatStream(@RequestBody @Valid ChatRequest req) {
-    return service.chatStream(req);
+  public Flux<ServerSentEvent<String>> chatStream(
+      @RequestBody @Valid ChatRequest req,
+      @AuthenticationPrincipal CustomUserDetails me,
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+    return service.chatStream(req, me.getId(), authHeader);
   }
 
   @Operation(
