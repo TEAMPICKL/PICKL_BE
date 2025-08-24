@@ -1,6 +1,10 @@
 package com.likelion.picklbe.domain.brand;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public enum Brand {
@@ -69,20 +73,12 @@ public enum Brand {
           Pattern.compile("hanaro", Pattern.CASE_INSENSITIVE))),
   GS_SUPER(
       "gs-super",
-      "GS수퍼마켓",
+      "GS슈퍼",
       "gs_super.png",
       List.of(
-          Pattern.compile("지에스\\s*리테일"),
-          Pattern.compile("\\bGS\\s*수퍼", Pattern.CASE_INSENSITIVE),
-          Pattern.compile("\\bGS\\s*super", Pattern.CASE_INSENSITIVE))),
-  GS_THE_FRESH(
-      "gs-the-fresh",
-      "GS더프레시",
-      "gs_the_fresh.png",
-      List.of(
-          Pattern.compile("더\\s*프레시"),
-          Pattern.compile("\\bGS\\s*the\\s*fresh", Pattern.CASE_INSENSITIVE))),
-  DEFAULT("default", "기타", null, List.of());
+          Pattern.compile("지에스리테일"),
+          Pattern.compile("\\bGS\\b\\s*(THE\\s*FRESH|슈퍼)?", Pattern.CASE_INSENSITIVE))),
+  DEFAULT("default", "기타", "mart_default.png", List.of());
 
   private final String code;
   private final String displayName;
@@ -108,10 +104,29 @@ public enum Brand {
     return displayName;
   }
 
+  private static final Map<String, Brand> BY_CODE;
+
+  static {
+    Map<String, Brand> m = new HashMap<>();
+    for (Brand b : values()) {
+      m.put(b.code().toLowerCase(Locale.ROOT), b);
+    }
+    BY_CODE = Collections.unmodifiableMap(m);
+  }
+
+  public static Brand fromCodeSafe(String code) {
+    if (code == null || code.isBlank()) {
+      return DEFAULT;
+    }
+    Brand b = BY_CODE.get(code.toLowerCase(Locale.ROOT));
+    return (b != null) ? b : DEFAULT;
+  }
+
   public static Brand fromStoreName(String name) {
     if (name == null || name.isBlank()) {
       return DEFAULT;
     }
+    // 우선순위: 에브리데이 → GS → 이마트 등 (선언 순서 유지)
     for (Brand b : values()) {
       if (b == DEFAULT) {
         continue;
@@ -120,18 +135,6 @@ public enum Brand {
         if (p.matcher(name).find()) {
           return b;
         }
-      }
-    }
-    return DEFAULT;
-  }
-
-  public static Brand fromCodeSafe(String code) {
-    if (code == null || code.isBlank()) {
-      return DEFAULT;
-    }
-    for (Brand b : values()) {
-      if (b.code.equalsIgnoreCase(code)) {
-        return b;
       }
     }
     return DEFAULT;
