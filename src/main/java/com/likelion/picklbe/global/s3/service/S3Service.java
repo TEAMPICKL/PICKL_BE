@@ -109,6 +109,7 @@ public class S3Service {
           case M08 -> s3Config.getM08Folder();
           case MARKET -> s3Config.getMARKETFolder();
           case BRAND -> s3Config.getBRANDFolder();
+          case ICON -> s3Config.getICONFolder();
         }
         + '/'
         + UUID.randomUUID();
@@ -149,6 +150,7 @@ public class S3Service {
           case M08 -> s3Config.getM08Folder();
           case MARKET -> s3Config.getMARKETFolder();
           case BRAND -> s3Config.getBRANDFolder();
+          case ICON -> s3Config.getICONFolder();
         };
 
     try {
@@ -178,6 +180,7 @@ public class S3Service {
           case M08 -> s3Config.getM08Folder();
           case MARKET -> s3Config.getMARKETFolder();
           case BRAND -> s3Config.getBRANDFolder();
+          case ICON -> s3Config.getICONFolder();
         };
     String keyName = prefix + "/" + fileName;
     deleteFile(keyName);

@@ -64,6 +64,9 @@ public class S3Config {
   @Value("${cloud.aws.s3.path.brand}")
   private String BRANDFolder;
 
+  @Value("${cloud.aws.s3.path.icon}")
+  private String ICONFolder;
+
   @PostConstruct
   public void init() {
     this.awsCredentials = new BasicAWSCredentials(accessKey, secretKey);

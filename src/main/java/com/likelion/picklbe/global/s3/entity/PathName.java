@@ -10,5 +10,6 @@ public enum PathName {
   M07,
   M08,
   MARKET,
-  BRAND
+  BRAND,
+  ICON
 }
