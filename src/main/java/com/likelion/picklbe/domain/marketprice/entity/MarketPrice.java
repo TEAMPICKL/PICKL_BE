@@ -38,4 +38,7 @@ public class MarketPrice {
 
   @Column(name = "super_market_price", nullable = false)
   private double superMarketPrice;
+
+  @Column(name = "image_url", nullable = false, length = 255)
+  private String imageUrl;
 }

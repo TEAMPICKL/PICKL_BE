@@ -21,4 +21,7 @@ public class MarketPriceResponse {
 
   @Schema(description = "대형마트 가격(원)", example = "36160")
   private double superMarketPrice;
+
+  @Schema(description = "이미지 URL", example = "https://cdn.example.com/img/cabbage.jpg")
+  private String imageUrl;
 }

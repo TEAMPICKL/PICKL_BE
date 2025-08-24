@@ -88,13 +88,17 @@ public class MarketPriceService {
 
   /** 관리자용 수동가 업서트(원하면 사용) */
   @Transactional
-  public MarketPrice upsert(String productName, String unit, double market, double mart) {
+  public MarketPrice upsert(
+      String productName, String unit, double market, double mart, String imageUrl) {
     return manualRepo
         .findByProductNameAndUnit(productName, unit)
         .map(
             m -> {
               m.setMarketPrice(market);
               m.setSuperMarketPrice(mart);
+              if (imageUrl != null && !imageUrl.isBlank()) { // ✅ 전달되면 갱신
+                m.setImageUrl(imageUrl);
+              }
               return m;
             })
         .orElseGet(
@@ -105,6 +109,7 @@ public class MarketPriceService {
                         .unit(unit)
                         .marketPrice(market)
                         .superMarketPrice(mart)
+                        .imageUrl(imageUrl == null ? "" : imageUrl) // ✅ 신규 기본값
                         .build()));
   }
 

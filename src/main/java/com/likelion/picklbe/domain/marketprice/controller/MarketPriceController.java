@@ -43,22 +43,25 @@ public class MarketPriceController {
         BaseResponse.success("OK", service.getMarketPricesFiltered(names, keys, true)));
   }
 
+  @PostMapping
   @Operation(
       summary = "전통시장, 대형 마트 가격 수동 입력 api",
       description =
           """
-              전통시장 가격, 대형마트 가격 입력을 위한 api\n
-              상품명과 단위가 개별 식재료 가격 조회에 나와 있는 정보가 정확히 일치해야함\n
-              필드: 상품명(productName), 단위(unit), 전통시장 가격(marketPrice), 대형마트 가격(superMarketPrice)
-              """)
-  @PostMapping
+          전통시장/대형마트 가격과 이미지 URL을 수동 입력합니다.
+          상품명과 단위는 개별 식재료 가격 조회와 동일해야 합니다.
+          필드: productName, unit, marketPrice, superMarketPrice, imageUrl(옵션)
+          """)
   public ResponseEntity<BaseResponse<MarketPrice>> upsert(
       @RequestParam String productName,
       @RequestParam String unit,
       @RequestParam double marketPrice,
-      @RequestParam double superMarketPrice) {
+      @RequestParam double superMarketPrice,
+      @RequestParam(required = false) String imageUrl // ✅ 추가(옵션)
+      ) {
     return ResponseEntity.ok(
         BaseResponse.success(
-            "UPSERTED", service.upsert(productName, unit, marketPrice, superMarketPrice)));
+            "UPSERTED",
+            service.upsert(productName, unit, marketPrice, superMarketPrice, imageUrl)));
   }
 }

@@ -15,12 +15,18 @@ public class MarketPriceMapper {
   public MarketPriceResponse toResponse(Item item, Optional<MarketPrice> manualOpt) {
     double market = manualOpt.map(MarketPrice::getMarketPrice).orElse(0.0);
     double mart = manualOpt.map(MarketPrice::getSuperMarketPrice).orElse(0.0);
+    String image =
+        manualOpt
+            .map(MarketPrice::getImageUrl) // ← ✅ 추가
+            .filter(s -> !s.isBlank())
+            .orElse("");
 
     return MarketPriceResponse.builder()
         .productName(item.getProductName())
         .unit(item.getUnit())
         .marketPrice(market)
         .superMarketPrice(mart)
+        .imageUrl(image)
         .build();
   }
 }
