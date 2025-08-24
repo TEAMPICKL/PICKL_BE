@@ -20,11 +20,14 @@ public class MartQueryService {
   private final PlaceRepository placeRepository;
   private final BrandImageResolver brandImageResolver;
 
-  /** 브랜드명이 없으면 지점명(name)으로 키를 만들어 이미지/브랜드코드 모두 해석 */
+  /**
+   * brand 컬럼이 있으면 우선 사용, 없으면 name 기반으로 브랜드 추정. brandCode를 한 번만 해석해서 imageUrl은 imageUrlForCode(...)로
+   * 생성해 중복 파싱을 피한다.
+   */
   private BrandInfo resolveBrandInfo(Place p) {
     String key = (p.getBrand() != null && !p.getBrand().isBlank()) ? p.getBrand() : p.getName();
-    String img = brandImageResolver.resolveImageUrl(key);
-    String code = brandImageResolver.resolveBrandCode(key);
+    String code = brandImageResolver.resolveBrandCode(key); // ex) "emart", "gs-super", "default"
+    String img = brandImageResolver.imageUrlForCode(code); // baseUrl/brandPath/default 처리 포함
     return new BrandInfo(img, code);
   }
 
@@ -44,7 +47,6 @@ public class MartQueryService {
         .map(
             p -> {
               BrandInfo brand = resolveBrandInfo(p);
-              // PlaceResponse.of(Place, imageUrl, brandCode) 시그니처 사용
               return PlaceResponse.of(p, brand.imageUrl(), brand.brandCode());
             })
         .collect(Collectors.toList());
@@ -56,12 +58,11 @@ public class MartQueryService {
         .map(
             p -> {
               BrandInfo brand = resolveBrandInfo(p);
-              // PlaceResponse.of(Place, imageUrl, brandCode) 시그니처 사용
               return PlaceResponse.of(p, brand.imageUrl(), brand.brandCode());
             })
         .collect(Collectors.toList());
   }
 
-  /** 내부 전용 DTO (Java 16+): 이미지 URL과 브랜드 코드 한 번에 전달 */
+  /** 내부 전용 DTO: 이미지 URL과 브랜드 코드 동시 전달 */
   private record BrandInfo(String imageUrl, String brandCode) {}
 }
