@@ -2,6 +2,7 @@ package com.likelion.picklbe.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -29,7 +30,6 @@ public class SecurityConfig {
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
-        // .httpBasic(Customizer.withDefaults())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
@@ -39,13 +39,23 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .permitAll()
-                    .requestMatchers("/api/auth/**", "/oauth2/**")
+                    .requestMatchers("/api/auths/**", "/oauth2/**")
                     .permitAll()
                     .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")
                     .requestMatchers("/api/user/**")
                     .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/quiz/daily")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/quiz/daily/answer")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/quiz/daily/admin/force-generate")
+                    .permitAll()
+                    .requestMatchers("/api/points/**")
+                    .authenticated()
                     .requestMatchers("/api/**")
+                    .permitAll()
+                    .requestMatchers("/actuator/**", "/debug/cache/**")
                     .permitAll()
                     .anyRequest()
                     .denyAll())
