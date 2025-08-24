@@ -4,12 +4,14 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +19,8 @@ import com.likelion.picklbe.domain.seasonitems.dto.request.SeasonItemCreateReque
 import com.likelion.picklbe.domain.seasonitems.dto.request.SeasonItemUpdateRequest;
 import com.likelion.picklbe.domain.seasonitems.dto.response.SeasonItemDetailDto;
 import com.likelion.picklbe.domain.seasonitems.dto.response.SeasonItemSummaryDto;
+import com.likelion.picklbe.domain.seasonitems.dto.seed.SeedSeasonItemRequest;
+import com.likelion.picklbe.domain.seasonitems.dto.seed.SeedSeasonItemResponse;
 import com.likelion.picklbe.domain.seasonitems.service.SeasonItemService;
 import com.likelion.picklbe.global.response.BaseResponse;
 
@@ -77,5 +81,21 @@ public class SeasonItemController {
   public BaseResponse<Void> delete(@PathVariable Long id) {
     seasonItemService.delete(id);
     return BaseResponse.success("제철 식재료 삭제 성공", null);
+  }
+
+  @PostMapping("/seed")
+  @Operation(
+      summary = "LLM 기반 제철 식재료 자동 생성(미리보기/저장)",
+      description =
+          """
+            - itemname + seasonMonth만 넘기면 나머지 설명/팁/손질법과 레시피 2개를 자동 생성합니다.
+            - dryRun=true면 DB에 저장하지 않고 미리보기만 반환합니다.
+            - replace=true면 기존 레시피를 삭제 후 2개 삽입, false면 이어붙입니다.
+          """)
+  public BaseResponse<SeedSeasonItemResponse> seed(
+      @RequestBody @Valid SeedSeasonItemRequest req,
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+    var res = seasonItemService.seedFromLLM(req, authHeader);
+    return BaseResponse.success("제철 식재료 자동 생성 완료", res);
   }
 }

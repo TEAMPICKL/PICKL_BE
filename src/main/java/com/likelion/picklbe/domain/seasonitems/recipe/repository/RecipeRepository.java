@@ -12,4 +12,6 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
   List<Recipe> findBySeasonItemId(Long seasonItemId);
 
   Optional<Recipe> findByIdAndSeasonItemId(Long id, Long seasonItemId);
+
+  void deleteBySeasonItemId(Long seasonItemId);
 }

@@ -31,20 +31,21 @@ public class Recipe {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "recipeName", nullable = false)
+  // ✅ DB 컬럼명이 recipe_name 이므로 snake_case 로 맞춰야 함
+  @Column(name = "recipe_name", nullable = false)
   private String recipeName;
 
   @Lob
   @Column(name = "ingredients", nullable = false)
-  private String ingredients; // 준비물
+  private String ingredients;
 
   @Lob
   @Column(name = "instructions", nullable = false)
-  private String instructions; // 조리 방법
+  private String instructions;
 
   @Lob
   @Column(name = "tip", nullable = false)
-  private String tip; // 꿀팁
+  private String tip;
 
   @Column(name = "cooking_time_text")
   private String cookingTimeText;
@@ -54,5 +55,5 @@ public class Recipe {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "season_item_id", nullable = false)
-  private SeasonItem seasonItem;
+  private SeasonItem seasonItem; // ✅ 연관 엔티티 자체를 들고 있음 (ID 아님)
 }
