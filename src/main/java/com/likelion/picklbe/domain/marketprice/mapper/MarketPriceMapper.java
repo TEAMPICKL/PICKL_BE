@@ -15,6 +15,9 @@ public class MarketPriceMapper {
   public MarketPriceResponse toResponse(Item item, Optional<MarketPrice> manualOpt) {
     double market = manualOpt.map(MarketPrice::getMarketPrice).orElse(0.0);
     double mart = manualOpt.map(MarketPrice::getSuperMarketPrice).orElse(0.0);
+    String productNo =
+        manualOpt.map(MarketPrice::getProductNo).filter(s -> !s.isBlank()).orElse("");
+
     String image =
         manualOpt
             .map(MarketPrice::getImageUrl) // ← ✅ 추가
@@ -24,6 +27,7 @@ public class MarketPriceMapper {
     return MarketPriceResponse.builder()
         .productName(item.getProductName())
         .unit(item.getUnit())
+        .productNo(productNo)
         .marketPrice(market)
         .superMarketPrice(mart)
         .imageUrl(image)

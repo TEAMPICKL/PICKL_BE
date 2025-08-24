@@ -109,7 +109,12 @@ public class MarketPriceService {
   /** 관리자용 수동가 업서트(원하면 사용) */
   @Transactional
   public MarketPrice upsert(
-      String productName, String unit, double market, double mart, String imageUrl) {
+      String productName,
+      String unit,
+      double market,
+      double mart,
+      String imageUrl,
+      String productNo) {
     return manualRepo
         .findByProductNameAndUnit(productName, unit)
         .map(
@@ -131,6 +136,42 @@ public class MarketPriceService {
                         .superMarketPrice(mart)
                         .imageUrl(imageUrl == null ? "" : imageUrl) // ✅ 신규 기본값
                         .build()));
+  }
+
+  @Transactional
+  public MarketPrice patch(
+      Long id,
+      String productName,
+      String unit,
+      Double marketPrice,
+      Double superMarketPrice,
+      String imageUrl,
+      String productNo) {
+    MarketPrice m =
+        manualRepo
+            .findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("market_price not found: id=" + id));
+
+    if (productName != null) {
+      m.setProductName(productName);
+    }
+    if (unit != null) {
+      m.setUnit(unit);
+    }
+    if (marketPrice != null) {
+      m.setMarketPrice(marketPrice);
+    }
+    if (superMarketPrice != null) {
+      m.setSuperMarketPrice(superMarketPrice);
+    }
+    if (imageUrl != null) {
+      m.setImageUrl(imageUrl);
+    }
+    if (productNo != null) {
+      m.setProductNo(productNo);
+    }
+
+    return manualRepo.save(m);
   }
 
   /** 내부 키: "상품명||단위" (공백 정규화 포함) */

@@ -24,4 +24,7 @@ public class MarketPriceResponse {
 
   @Schema(description = "이미지 URL", example = "https://cdn.example.com/img/cabbage.jpg")
   private String imageUrl;
+
+  @Schema(description = "상품번호(옵션)", example = "A1234")
+  private String productNo;
 }

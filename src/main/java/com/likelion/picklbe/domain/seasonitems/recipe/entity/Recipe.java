@@ -1,6 +1,5 @@
 package com.likelion.picklbe.domain.seasonitems.recipe.entity;
 
-import com.likelion.picklbe.domain.seasonitems.entity.SeasonItem;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -11,6 +10,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
+import com.likelion.picklbe.domain.seasonitems.entity.SeasonItem;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

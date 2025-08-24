@@ -1,5 +1,15 @@
 package com.likelion.picklbe.domain.seasonitems.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import com.likelion.picklbe.domain.seasonitems.dto.request.SeasonItemCreateRequest;
 import com.likelion.picklbe.domain.seasonitems.dto.request.SeasonItemUpdateRequest;
 import com.likelion.picklbe.domain.seasonitems.dto.response.SeasonItemDetailDto;
@@ -15,15 +25,8 @@ import com.likelion.picklbe.domain.seasonitems.recipe.entity.Recipe;
 import com.likelion.picklbe.domain.seasonitems.recipe.repository.RecipeRepository;
 import com.likelion.picklbe.domain.seasonitems.repository.SeasonItemRepository;
 import com.likelion.picklbe.global.exception.CustomException;
-import java.util.ArrayList;
-import java.util.List;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -101,9 +104,7 @@ public class SeasonItemService {
   // ========= ★ 여기부터: LLM 기반 자동 생성(seed) =========
 
   // Python(/seed/season-item) 요청/응답 형식 매핑
-  private record PySeedReq(String itemname, int in_season_month, String mode, boolean dry_run) {
-
-  }
+  private record PySeedReq(String itemname, int in_season_month, String mode, boolean dry_run) {}
 
   private record PyRecipe(
       String recipe_name,
@@ -111,9 +112,7 @@ public class SeasonItemService {
       String instructions,
       String tip,
       String cooking_time_text,
-      String recommend_tags_csv) {
-
-  }
+      String recommend_tags_csv) {}
 
   private record PyPreview(
       String short_description,
@@ -122,14 +121,10 @@ public class SeasonItemService {
       String how_to_store,
       String how_to_trim,
       String tip,
-      List<PyRecipe> recipes) {
-
-  }
+      List<PyRecipe> recipes) {}
 
   private record PySeedRes(
-      Long season_item_id, String upserted, Integer recipes_inserted, PyPreview preview) {
-
-  }
+      Long season_item_id, String upserted, Integer recipes_inserted, PyPreview preview) {}
 
   // 숫자 앞 공백 규칙: 한글/영문/닫는 괄호 바로 뒤에 숫자가 오면 공백 1개 삽입
   private static String spaceBeforeNumbers(String s) {
@@ -168,7 +163,7 @@ public class SeasonItemService {
   /**
    * LLM으로 초안 생성 → (옵션) 저장.
    *
-   * @param req        itemname + seasonMonth, replace, dryRun
+   * @param req itemname + seasonMonth, replace, dryRun
    * @param authHeader 스프링 JWT 그대로 전달 (langchain에서 사용자 인증/감사 로그 용)
    */
   @Transactional
@@ -228,24 +223,27 @@ public class SeasonItemService {
 
     boolean isInsert = (item.getId() == null);
 
-    item = SeasonItem.builder()
-        .id(item.getId())
-        .itemname(item.getItemname())
-        .inSeasonMonth(req.getSeasonMonth())
-        .shortDescription(preview.getShortDescription())
-        .representativeNutrient(preview.getRepresentativeNutrient())
-        .howToChoose(preview.getHowToChoose())
-        .howToStore(preview.getHowToStore())
-        .howToTrim(preview.getHowToTrim())
-        .tip(preview.getTip() != null ? preview.getTip()
-            : (item.getTip() == null ? "" : item.getTip()))  // ★ 변경
-        // 유지 필드
-        .imageUrl(item.getImageUrl() == null ? "" : item.getImageUrl())
-        .calorie(item.getCalorie() == null ? "" : item.getCalorie())
-        .price(item.getPrice() == null ? 0 : item.getPrice())
-        .unit(item.getUnit() == null ? "" : item.getUnit())
-        .recommendedRecipes(item.getRecommendedRecipes())
-        .build();
+    item =
+        SeasonItem.builder()
+            .id(item.getId())
+            .itemname(item.getItemname())
+            .inSeasonMonth(req.getSeasonMonth())
+            .shortDescription(preview.getShortDescription())
+            .representativeNutrient(preview.getRepresentativeNutrient())
+            .howToChoose(preview.getHowToChoose())
+            .howToStore(preview.getHowToStore())
+            .howToTrim(preview.getHowToTrim())
+            .tip(
+                preview.getTip() != null
+                    ? preview.getTip()
+                    : (item.getTip() == null ? "" : item.getTip())) // ★ 변경
+            // 유지 필드
+            .imageUrl(item.getImageUrl() == null ? "" : item.getImageUrl())
+            .calorie(item.getCalorie() == null ? "" : item.getCalorie())
+            .price(item.getPrice() == null ? 0 : item.getPrice())
+            .unit(item.getUnit() == null ? "" : item.getUnit())
+            .recommendedRecipes(item.getRecommendedRecipes())
+            .build();
 
     item = seasonItemRepository.save(item);
 

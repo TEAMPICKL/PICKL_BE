@@ -41,4 +41,7 @@ public class MarketPrice {
 
   @Column(name = "image_url", nullable = false, length = 255)
   private String imageUrl;
+
+  @Column(name = "product_no", length = 50)
+  private String productNo;
 }
