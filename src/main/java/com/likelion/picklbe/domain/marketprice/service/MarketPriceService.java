@@ -1,19 +1,22 @@
 package com.likelion.picklbe.domain.marketprice.service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.likelion.picklbe.domain.marketprice.dto.response.MarketPriceResponse;
 import com.likelion.picklbe.domain.marketprice.entity.MarketPrice;
 import com.likelion.picklbe.domain.marketprice.mapper.MarketPriceMapper;
 import com.likelion.picklbe.domain.marketprice.repository.MarketPriceRepository;
 import com.likelion.picklbe.global.api.kamis.client.KamisPriceClient;
 import com.likelion.picklbe.global.api.kamis.dto.KamisPriceResponse.Item;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,17 +26,13 @@ public class MarketPriceService {
   private final MarketPriceRepository manualRepo;
   private final MarketPriceMapper mapper;
 
-  /**
-   * 기본 리스트: 필터 없이 호출
-   */
+  /** 기본 리스트: 필터 없이 호출 */
   @Transactional(readOnly = true)
   public List<MarketPriceResponse> getMarketPrices() {
     return getMarketPricesFiltered(null, null, false);
   }
 
-  /**
-   * 선택 필터 리스트
-   */
+  /** 선택 필터 리스트 */
   @Transactional(readOnly = true)
   public List<MarketPriceResponse> getMarketPricesFiltered(
       Set<String> names, Set<String> keys, boolean onlyManual) {
@@ -107,9 +106,7 @@ public class MarketPriceService {
     return out;
   }
 
-  /**
-   * 관리자용 수동가 업서트(원하면 사용)
-   */
+  /** 관리자용 수동가 업서트(원하면 사용) */
   @Transactional
   public MarketPrice upsert(
       String productName,
@@ -119,30 +116,31 @@ public class MarketPriceService {
       String imageUrl,
       String productNo) {
 
-    return manualRepo.findByProductNameAndUnit(productName, unit)
-        .map(m -> {
-          m.setMarketPrice(market);
-          m.setSuperMarketPrice(mart);
-          if (imageUrl != null && !imageUrl.isBlank()) {
-            m.setImageUrl(imageUrl);
-          }
-          if (productNo != null && !productNo.isBlank()) {
-            m.setProductNo(productNo);
-          }
-          return m;
-        })
-        .orElseGet(() ->
-            manualRepo.save(
-                MarketPrice.builder()
-                    .productName(productName)
-                    .unit(unit)
-                    .marketPrice(market)
-                    .superMarketPrice(mart)
-                    .imageUrl(imageUrl == null ? "" : imageUrl)
-                    .productNo(productNo)
-                    .build()
-            )
-        );
+    return manualRepo
+        .findByProductNameAndUnit(productName, unit)
+        .map(
+            m -> {
+              m.setMarketPrice(market);
+              m.setSuperMarketPrice(mart);
+              if (imageUrl != null && !imageUrl.isBlank()) {
+                m.setImageUrl(imageUrl);
+              }
+              if (productNo != null && !productNo.isBlank()) {
+                m.setProductNo(productNo);
+              }
+              return m;
+            })
+        .orElseGet(
+            () ->
+                manualRepo.save(
+                    MarketPrice.builder()
+                        .productName(productName)
+                        .unit(unit)
+                        .marketPrice(market)
+                        .superMarketPrice(mart)
+                        .imageUrl(imageUrl == null ? "" : imageUrl)
+                        .productNo(productNo)
+                        .build()));
   }
 
   @Transactional
@@ -181,23 +179,17 @@ public class MarketPriceService {
     return manualRepo.save(m);
   }
 
-  /**
-   * 내부 키: "상품명||단위" (공백 정규화 포함)
-   */
+  /** 내부 키: "상품명||단위" (공백 정규화 포함) */
   private String key(String productName, String unit) {
     return norm(productName) + "||" + norm(unit);
   }
 
-  /**
-   * 공백 정규화
-   */
+  /** 공백 정규화 */
   private String norm(String s) {
     return s == null ? "" : s.trim().replaceAll("\\s+", " ");
   }
 
-  /**
-   * 외부 쿼리파라미터를 내부 키로 정규화
-   */
+  /** 외부 쿼리파라미터를 내부 키로 정규화 */
   private String toKey(String raw) {
     if (raw == null) {
       return "";
