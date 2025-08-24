@@ -37,13 +37,16 @@ public class MarketPriceService {
   public List<MarketPriceResponse> getMarketPricesFiltered(
       Set<String> names, Set<String> keys, boolean onlyManual) {
 
-    // 1) KAMIS 아이템
+    // 1) KAMIS 원본
     List<Item> items =
         Optional.ofNullable(kamisPriceClient.fetchPriceData().getPrice()).orElseGet(List::of);
 
-    // 2) names(상품명) 1차 필터 (옵션)
-    if (names != null && !names.isEmpty()) {
-      Set<String> nameSet = names.stream().map(this::norm).collect(Collectors.toSet());
+    // 2) 선택 필터: names
+    Set<String> nameSet =
+        (names == null || names.isEmpty())
+            ? null
+            : names.stream().map(this::norm).collect(Collectors.toSet());
+    if (nameSet != null) {
       items =
           items.stream()
               .filter(i -> i.getProductName() != null && nameSet.contains(norm(i.getProductName())))
@@ -55,35 +58,52 @@ public class MarketPriceService {
         items.stream()
             .filter(i -> i.getProductName() != null && i.getUnit() != null)
             .collect(
-                Collectors.toMap(
-                    i -> key(i.getProductName(), i.getUnit()), i -> i, (a, b) -> a // 충돌 시 첫 값 유지
-                    ));
+                Collectors.toMap(i -> key(i.getProductName(), i.getUnit()), i -> i, (a, b) -> a));
 
-    // 4) keys("상품명||단위") 2차 필터 (옵션)
-    if (keys != null && !keys.isEmpty()) {
-      Set<String> keySet = keys.stream().map(this::toKey).collect(Collectors.toSet());
-      unique.keySet().retainAll(keySet); // Map 뷰라서 실제 Map이 걸러짐
+    // 4) 선택 필터: keys
+    Set<String> keySet =
+        (keys == null || keys.isEmpty())
+            ? null
+            : keys.stream().map(this::toKey).collect(Collectors.toSet());
+    if (keySet != null) {
+      unique.keySet().retainAll(keySet);
     }
 
-    // 5) 수동가 전체 로드 → Map (※ 타입은 MarketPrice!)
+    // 5) 수동가 맵
     Map<String, MarketPrice> manualMap =
         manualRepo.findAll().stream()
             .collect(
                 Collectors.toMap(m -> key(m.getProductName(), m.getUnit()), m -> m, (a, b) -> a));
 
-    // 6) onlyManual=true 면 수동가 있는 것만
-    var stream = unique.values().stream();
-    if (onlyManual) {
-      stream = stream.filter(i -> manualMap.containsKey(key(i.getProductName(), i.getUnit())));
+    List<MarketPriceResponse> out = new java.util.ArrayList<>();
+
+    // 6) KAMIS 기반 매핑 (onlyManual이면 manual 있는 키만)
+    for (Item i : unique.values()) {
+      String k = key(i.getProductName(), i.getUnit());
+      if (onlyManual && !manualMap.containsKey(k)) {
+        continue;
+      }
+      out.add(mapper.toResponse(i, Optional.ofNullable(manualMap.get(k))));
     }
 
-    // 7) 응답 매핑
-    return stream
-        .map(
-            i ->
-                mapper.toResponse(
-                    i, Optional.ofNullable(manualMap.get(key(i.getProductName(), i.getUnit())))))
-        .toList();
+    // 7) ✅ manual-only(=KAMIS에 없는 키)도 포함
+    if (onlyManual) {
+      for (MarketPrice m : manualMap.values()) {
+        String k = key(m.getProductName(), m.getUnit());
+        if (unique.containsKey(k)) {
+          continue; // 이미 위에서 포함됨
+        }
+        if (nameSet != null && !nameSet.contains(norm(m.getProductName()))) {
+          continue;
+        }
+        if (keySet != null && !keySet.contains(k)) {
+          continue; // 키 필터가 있으면 존중
+        }
+        out.add(mapper.fromManual(m));
+      }
+    }
+
+    return out;
   }
 
   /** 관리자용 수동가 업서트(원하면 사용) */

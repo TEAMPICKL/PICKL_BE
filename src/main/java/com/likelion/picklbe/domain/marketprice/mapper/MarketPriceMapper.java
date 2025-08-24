@@ -29,4 +29,14 @@ public class MarketPriceMapper {
         .imageUrl(image)
         .build();
   }
+
+  public MarketPriceResponse fromManual(MarketPrice m) {
+    return MarketPriceResponse.builder()
+        .productName(m.getProductName())
+        .unit(m.getUnit())
+        .marketPrice(m.getMarketPrice())
+        .superMarketPrice(m.getSuperMarketPrice())
+        .imageUrl(m.getImageUrl() == null ? "" : m.getImageUrl())
+        .build();
+  }
 }
