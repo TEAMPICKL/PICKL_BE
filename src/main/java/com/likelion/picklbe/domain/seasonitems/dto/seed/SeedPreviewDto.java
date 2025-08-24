@@ -1,7 +1,6 @@
 package com.likelion.picklbe.domain.seasonitems.dto.seed;
 
 import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,5 +19,6 @@ public class SeedPreviewDto {
   private String howToChoose;
   private String howToStore;
   private String howToTrim;
+  private String tip;
   private List<SeedRecipePreviewDto> recipes;
 }

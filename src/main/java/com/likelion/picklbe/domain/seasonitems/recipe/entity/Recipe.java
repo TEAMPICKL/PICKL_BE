@@ -1,5 +1,6 @@
 package com.likelion.picklbe.domain.seasonitems.recipe.entity;
 
+import com.likelion.picklbe.domain.seasonitems.entity.SeasonItem;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -10,9 +11,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-
-import com.likelion.picklbe.domain.seasonitems.entity.SeasonItem;
-
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,7 +29,6 @@ public class Recipe {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // ✅ DB 컬럼명이 recipe_name 이므로 snake_case 로 맞춰야 함
   @Column(name = "recipe_name", nullable = false)
   private String recipeName;
 
