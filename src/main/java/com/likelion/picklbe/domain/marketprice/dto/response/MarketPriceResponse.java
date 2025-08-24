@@ -10,6 +10,9 @@ import lombok.Data;
 @AllArgsConstructor
 public class MarketPriceResponse {
 
+  @Schema(description = "ID", example = "6")
+  private Long id;
+
   @Schema(description = "상품명", example = "배추")
   private String productName;
 

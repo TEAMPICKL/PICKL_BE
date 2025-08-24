@@ -17,6 +17,7 @@ public class MarketPriceMapper {
     double mart = manualOpt.map(MarketPrice::getSuperMarketPrice).orElse(0.0);
     String productNo =
         manualOpt.map(MarketPrice::getProductNo).filter(s -> !s.isBlank()).orElse("");
+    Long id = manualOpt.map(MarketPrice::getId).orElse(null);
 
     String image =
         manualOpt
@@ -25,6 +26,7 @@ public class MarketPriceMapper {
             .orElse("");
 
     return MarketPriceResponse.builder()
+        .id(id)
         .productName(item.getProductName())
         .unit(item.getUnit())
         .productNo(productNo)
@@ -36,6 +38,7 @@ public class MarketPriceMapper {
 
   public MarketPriceResponse fromManual(MarketPrice m) {
     return MarketPriceResponse.builder()
+        .id(m.getId())
         .productName(m.getProductName())
         .unit(m.getUnit())
         .marketPrice(m.getMarketPrice())
