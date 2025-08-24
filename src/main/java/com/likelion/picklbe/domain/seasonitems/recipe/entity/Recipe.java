@@ -52,5 +52,5 @@ public class Recipe {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "season_item_id", nullable = false)
-  private SeasonItem seasonItem; // ✅ 연관 엔티티 자체를 들고 있음 (ID 아님)
+  private SeasonItem seasonItem;
 }
